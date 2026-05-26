@@ -1,3 +1,4 @@
+// config.js
 export const SHAPE_HIERARCHY = {
     'Cherry': { next: 'Strawberry', color: '#ff5c7a', size: 24, vertices: [[0, -0.9], [0.5, -0.7], [0.8, -0.2], [0.8, 0.4], [0.4, 0.9], [-0.4, 0.9], [-0.8, 0.4], [-0.8, -0.2], [-0.5, -0.7]] },
     'Strawberry': { next: 'Grape', color: '#ff7fa4', size: 30, vertices: [[0, -1], [0.6, -0.7], [0.8, -0.1], [0.5, 0.6], [0, 1.1], [-0.5, 0.6], [-0.8, -0.1], [-0.6, -0.7]] },

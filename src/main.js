@@ -34,8 +34,6 @@ function resizeCanvas() {
   const rect = wrapper.getBoundingClientRect();
   canvas.width = rect.width;
   canvas.height = rect.height;
-  canvas.style.width = '100%';
-  canvas.style.height = '100%';
 
   playArea.width = canvas.width;
   playArea.height = canvas.height - TOP_MARGIN - BOTTOM_MARGIN;
@@ -328,13 +326,12 @@ function bindUI() {
     if (e.touches.length > 0) handlePointerMove(e.touches[0].clientX);
   }, { passive: true });
 
-  wrapper.addEventListener('touchend', (e) => {
+  wrapper.addEventListener('click', (e) => {
     if (e.target.closest('button') || !gameActive || paused) return;
     initAudio();
     dropCurrentShape();
   });
-
-  wrapper.addEventListener('mouseup', (e) => {
+  wrapper.addEventListener('touchend', (e) => {
     if (e.target.closest('button') || !gameActive || paused) return;
     initAudio();
     dropCurrentShape();

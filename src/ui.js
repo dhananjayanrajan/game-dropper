@@ -1,3 +1,4 @@
+// ui.js
 export let globalScore = 0;
 
 const scoreDisplay = document.getElementById('scoreDisplay');

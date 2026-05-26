@@ -1,3 +1,4 @@
+// audio.js
 let audioCtx = null;
 let masterCompressor = null;
 let isMuted = false;
@@ -26,6 +27,9 @@ export function playGoofySound(type, volumeFactor = 1.0) {
     if (isMuted) return;
     initAudio();
     const now = audioCtx.currentTime;
+    const masterGainNode = audioCtx.createGain();
+    masterGainNode.gain.value = 5.0;
+    masterGainNode.connect(masterCompressor);
 
     if (type === 'drop') {
         const osc = audioCtx.createOscillator();
@@ -48,7 +52,7 @@ export function playGoofySound(type, volumeFactor = 1.0) {
         mod.connect(modGain);
         modGain.connect(osc.frequency);
         osc.connect(gain);
-        gain.connect(masterCompressor);
+        gain.connect(masterGainNode);
 
         mod.start(now);
         osc.start(now);
@@ -79,7 +83,7 @@ export function playGoofySound(type, volumeFactor = 1.0) {
 
         osc.connect(filter);
         filter.connect(gain);
-        gain.connect(masterCompressor);
+        gain.connect(masterGainNode);
 
         osc.start(now);
         osc.stop(now + 0.14);
@@ -100,7 +104,7 @@ export function playGoofySound(type, volumeFactor = 1.0) {
             gain.gain.exponentialRampToValueAtTime(0.001, now + startDelay + 0.28);
 
             osc.connect(gain);
-            gain.connect(masterCompressor);
+            gain.connect(masterGainNode);
 
             osc.start(now + startDelay);
             osc.stop(now + startDelay + 0.28);
@@ -114,7 +118,7 @@ export function playGoofySound(type, volumeFactor = 1.0) {
         gain.gain.setValueAtTime(0.2 * volumeFactor, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
         osc.connect(gain);
-        gain.connect(masterCompressor);
+        gain.connect(masterGainNode);
         osc.start(now);
         osc.stop(now + 0.04);
     }
@@ -138,7 +142,7 @@ export function playGoofySound(type, volumeFactor = 1.0) {
         vibrato.connect(vibGain);
         vibGain.connect(osc.frequency);
         osc.connect(gain);
-        gain.connect(masterCompressor);
+        gain.connect(masterGainNode);
 
         vibrato.start(now);
         osc.start(now);

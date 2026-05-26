@@ -1,3 +1,4 @@
+// physics.js
 import { SHAPE_HIERARCHY, SHAPE_TYPES, FACES, PHYSICS_CONSTANTS } from './config.js';
 import { playGoofySound } from './audio.js';
 import { updateScoreDisplay } from './ui.js';
