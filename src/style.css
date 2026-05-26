@@ -24,44 +24,11 @@ html {
   overflow: hidden;
 }
 
-#navContainer {
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  background: white;
-  border-bottom: 2px solid #edf2f7;
-}
-
-#topNav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  gap: 10px;
-}
-
-#scoreNav {
-  display: flex;
-  justify-content: center;
-  padding: 4px 16px 8px 16px;
-  font-weight: bold;
-  font-size: 1.1rem;
-}
-
 #gameCanvas {
   width: 100%;
-  flex-grow: 1;
+  height: 100%;
   touch-action: none;
   display: block;
-}
-
-.bottomBar {
-  display: flex;
-  justify-content: space-around;
-  padding: 12px;
-  background: #edf2f7;
-  flex-shrink: 0;
-  z-index: 10;
 }
 
 #gameLostOverlay {
