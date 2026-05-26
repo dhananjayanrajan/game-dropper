@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+* {
+  font-family: 'Quicksand', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
