@@ -34,6 +34,8 @@ function resizeCanvas() {
   const rect = wrapper.getBoundingClientRect();
   canvas.width = rect.width;
   canvas.height = rect.height;
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
 
   playArea.width = canvas.width;
   playArea.height = canvas.height - TOP_MARGIN - BOTTOM_MARGIN;
@@ -94,7 +96,7 @@ function update(dt) {
   gameTime += dt;
   timerDisplay.innerText = gameTime.toFixed(1);
 
-  const { SUB_STEPS, GRAVITY, ANGULAR_DRAG, SLEEP_VELOCITY_THRESHOLD, SLEEP_ANGULAR_THRESHOLD, SLEEP_TIME_REQUIRED } = PHYSICS_CONSTANTS;
+  const { SUB_STEPS, GRAVITY, ANGULAR_DRAG } = PHYSICS_CONSTANTS;
   const substepDt = 1 / SUB_STEPS;
 
   for (let step = 0; step < SUB_STEPS; step++) {
@@ -114,27 +116,6 @@ function update(dt) {
     s.currentSquishY += (s.targetSquishY - s.currentSquishY) * 0.12;
     s.targetSquishX += (1.0 - s.targetSquishX) * 0.1;
     s.targetSquishY += (1.0 - s.targetSquishY) * 0.1;
-
-    if (s.soundCooldown > 0) {
-      s.soundCooldown -= dt;
-    }
-
-    if (!s.isSleeping) {
-      const linearSpeed = Math.hypot(s.vx, s.vy);
-      const angularSpeed = Math.abs(s.angularVelocity);
-
-      if (linearSpeed < SLEEP_VELOCITY_THRESHOLD && angularSpeed < SLEEP_ANGULAR_THRESHOLD) {
-        s.sleepTimer += dt;
-        if (s.sleepTimer >= SLEEP_TIME_REQUIRED) {
-          s.isSleeping = true;
-          s.vx = 0;
-          s.vy = 0;
-          s.angularVelocity = 0;
-        }
-      } else {
-        s.sleepTimer = 0;
-      }
-    }
   }
 
   if (mergingAnimations.length === 0 && !isReadyToDrop) {
@@ -161,7 +142,7 @@ function update(dt) {
   checkGameOver();
 }
 
-function drawFace(radius, face, alpha) {
+function drawFace(radius, face, alpha, isSleeping) {
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.fillStyle = '#2d3748';
@@ -173,35 +154,41 @@ function drawFace(radius, face, alpha) {
   const eyeY = -radius * 0.15;
   const eyeSize = Math.max(3, radius * 0.08);
 
-  if (face.eyes === 'happy') {
-    ctx.beginPath(); ctx.arc(-eyeOffset, eyeY, eyeSize, Math.PI, 0, false); ctx.stroke();
-    ctx.beginPath(); ctx.arc(eyeOffset, eyeY, eyeSize, Math.PI, 0, false); ctx.stroke();
-  } else if (face.eyes === 'cute') {
-    ctx.beginPath(); ctx.arc(-eyeOffset, eyeY, eyeSize * 1.2, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(eyeOffset, eyeY, eyeSize * 1.2, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(-eyeOffset - 1, eyeY - 1, eyeSize * 0.4, 0, Math.PI * 2);
-    ctx.arc(eyeOffset - 1, eyeY - 1, eyeSize * 0.4, 0, Math.PI * 2); ctx.fill();
-  } else if (face.eyes === 'blink') {
+  if (isSleeping) {
     ctx.beginPath(); ctx.moveTo(-eyeOffset - eyeSize, eyeY); ctx.lineTo(-eyeOffset + eyeSize, eyeY); ctx.stroke();
-    ctx.beginPath(); ctx.arc(eyeOffset, eyeY, eyeSize, Math.PI, 0, false); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(eyeOffset - eyeSize, eyeY); ctx.lineTo(eyeOffset + eyeSize, eyeY); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, radius * 0.25, radius * 0.1, 0, Math.PI * 2); ctx.stroke();
   } else {
-    ctx.beginPath(); ctx.arc(-eyeOffset, eyeY, eyeSize, 0, Math.PI * 2); ctx.arc(eyeOffset, eyeY, eyeSize, 0, Math.PI * 2); ctx.fill();
-  }
+    if (face.eyes === 'happy') {
+      ctx.beginPath(); ctx.arc(-eyeOffset, eyeY, eyeSize, Math.PI, 0, false); ctx.stroke();
+      ctx.beginPath(); ctx.arc(eyeOffset, eyeY, eyeSize, Math.PI, 0, false); ctx.stroke();
+    } else if (face.eyes === 'cute') {
+      ctx.beginPath(); ctx.arc(-eyeOffset, eyeY, eyeSize * 1.2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(eyeOffset, eyeY, eyeSize * 1.2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(-eyeOffset - 1, eyeY - 1, eyeSize * 0.4, 0, Math.PI * 2);
+      ctx.arc(eyeOffset - 1, eyeY - 1, eyeSize * 0.4, 0, Math.PI * 2); ctx.fill();
+    } else if (face.eyes === 'blink') {
+      ctx.beginPath(); ctx.moveTo(-eyeOffset - eyeSize, eyeY); ctx.lineTo(-eyeOffset + eyeSize, eyeY); ctx.stroke();
+      ctx.beginPath(); ctx.arc(eyeOffset, eyeY, eyeSize, Math.PI, 0, false); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(-eyeOffset, eyeY, eyeSize, 0, Math.PI * 2); ctx.arc(eyeOffset, eyeY, eyeSize, 0, Math.PI * 2); ctx.fill();
+    }
 
-  const mouthY = radius * 0.2;
-  if (face.mouth === 'smile') {
-    ctx.beginPath(); ctx.arc(0, mouthY, radius * 0.2, 0, Math.PI, false); ctx.stroke();
-  } else if (face.mouth === 'smile_wide') {
-    ctx.beginPath(); ctx.arc(0, mouthY, radius * 0.25, 0, Math.PI, false); ctx.closePath(); ctx.fill();
-  } else if (face.mouth === 'open') {
-    ctx.beginPath(); ctx.arc(0, mouthY + 2, radius * 0.15, 0, Math.PI * 2); ctx.fill();
-  } else if (face.mouth === 'tongue') {
-    ctx.beginPath(); ctx.arc(0, mouthY, radius * 0.2, 0, Math.PI, false); ctx.stroke();
-    ctx.fillStyle = '#ff8a80';
-    ctx.beginPath(); ctx.arc(2, mouthY + 3, radius * 0.1, 0, Math.PI * 2); ctx.fill();
-  } else if (face.mouth === 'shy') {
-    ctx.beginPath(); ctx.moveTo(-radius * 0.15, mouthY); ctx.lineTo(radius * 0.15, mouthY); ctx.stroke();
+    const mouthY = radius * 0.2;
+    if (face.mouth === 'smile') {
+      ctx.beginPath(); ctx.arc(0, mouthY, radius * 0.2, 0, Math.PI, false); ctx.stroke();
+    } else if (face.mouth === 'smile_wide') {
+      ctx.beginPath(); ctx.arc(0, mouthY, radius * 0.25, 0, Math.PI, false); ctx.closePath(); ctx.fill();
+    } else if (face.mouth === 'open') {
+      ctx.beginPath(); ctx.arc(0, mouthY + 2, radius * 0.15, 0, Math.PI * 2); ctx.fill();
+    } else if (face.mouth === 'tongue') {
+      ctx.beginPath(); ctx.arc(0, mouthY, radius * 0.2, 0, Math.PI, false); ctx.stroke();
+      ctx.fillStyle = '#ff8a80';
+      ctx.beginPath(); ctx.arc(2, mouthY + 3, radius * 0.1, 0, Math.PI * 2); ctx.fill();
+    } else if (face.mouth === 'shy') {
+      ctx.beginPath(); ctx.moveTo(-radius * 0.15, mouthY); ctx.lineTo(radius * 0.15, mouthY); ctx.stroke();
+    }
   }
   ctx.restore();
 }
@@ -213,10 +200,10 @@ function drawShapeElement(vertices, x, y, radius, color, angle, alpha = 1.0, squ
   ctx.rotate(angle);
   ctx.scale(squishX, squishY);
 
-  ctx.shadowColor = '#beccda';
-  ctx.shadowBlur = isSleeping ? 4 : 12;
-  ctx.shadowOffsetX = isSleeping ? 2 : 6;
-  ctx.shadowOffsetY = isSleeping ? 2 : 6;
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetX = 3;
+  ctx.shadowOffsetY = 3;
 
   ctx.fillStyle = color;
   ctx.lineJoin = 'round';
@@ -252,7 +239,7 @@ function drawShapeElement(vertices, x, y, radius, color, angle, alpha = 1.0, squ
   ctx.stroke();
 
   if (face) {
-    drawFace(radius, face, isSleeping ? alpha * 0.6 : alpha);
+    drawFace(radius, face, alpha, isSleeping);
   }
   ctx.restore();
 }
@@ -341,12 +328,13 @@ function bindUI() {
     if (e.touches.length > 0) handlePointerMove(e.touches[0].clientX);
   }, { passive: true });
 
-  wrapper.addEventListener('click', (e) => {
+  wrapper.addEventListener('touchend', (e) => {
     if (e.target.closest('button') || !gameActive || paused) return;
     initAudio();
     dropCurrentShape();
   });
-  wrapper.addEventListener('touchend', (e) => {
+
+  wrapper.addEventListener('mouseup', (e) => {
     if (e.target.closest('button') || !gameActive || paused) return;
     initAudio();
     dropCurrentShape();

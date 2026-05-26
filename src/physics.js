@@ -178,10 +178,16 @@ export function checkCollisions(playArea) {
                     return;
                 }
 
-                const overlap = minDist - dist;
                 const nx = dx / (dist || 1);
                 const ny = dy / (dist || 1);
 
+                const relVx = b.vx - a.vx;
+                const relVy = b.vy - a.vy;
+                const velAlongNormal = relVx * nx + relVy * ny;
+
+                if (velAlongNormal > 0) continue;
+
+                const overlap = minDist - dist;
                 const correctionX = nx * overlap * POSITION_CORRECTION_PERCENT;
                 const correctionY = ny * overlap * POSITION_CORRECTION_PERCENT;
 
@@ -194,60 +200,21 @@ export function checkCollisions(playArea) {
                     b.y += correctionY * 0.5;
                 }
 
-                const rAx = -ny * a.radius;
-                const rAy = nx * a.radius;
-                const rBx = ny * b.radius;
-                const rBy = -nx * b.radius;
+                const jScalar = -(1 + BOUNCE) * velAlongNormal / 2;
+                const impulseX = jScalar * nx;
+                const impulseY = jScalar * ny;
 
-                const vAx = a.vx - a.angularVelocity * rAy;
-                const vAy = a.vy + a.angularVelocity * rAx;
-                const vBx = b.vx - b.angularVelocity * rBy;
-                const vBy = b.vy + b.angularVelocity * rBx;
-
-                const relVx = vBx - vAx;
-                const relVy = vBy - vAy;
-                const velAlongNormal = relVx * nx + relVy * ny;
-
-                if (velAlongNormal < 0) {
-                    wakeUpShape(a);
-                    wakeUpShape(b);
-
-                    const impulseInverseDenominator = (1 / 1) + (1 / 1) +
-                        (Math.pow(rAx * ny - rAy * nx, 2) / a.inertia) +
-                        (Math.pow(rBx * ny - rBy * nx, 2) / b.inertia);
-
-                    const jScalar = -(1 + BOUNCE) * velAlongNormal / impulseInverseDenominator;
-
-                    const impulseX = jScalar * nx;
-                    const impulseY = jScalar * ny;
-
+                if (!a.isSleeping) {
                     a.vx -= impulseX;
                     a.vy -= impulseY;
+                }
+                if (!b.isSleeping) {
                     b.vx += impulseX;
                     b.vy += impulseY;
-
-                    const tangentX = -ny;
-                    const tangentY = nx;
-                    const relTanVel = relVx * tangentX + relVy * tangentY;
-
-                    if (Math.abs(relTanVel) > 0.15) {
-                        const torqueFactor = relTanVel * ROLLING_GRIP;
-                        a.angularVelocity += torqueFactor * (a.radius / a.inertia);
-                        b.angularVelocity -= torqueFactor * (b.radius / b.inertia);
-
-                        a.vx += tangentX * torqueFactor * 0.05;
-                        a.vy += tangentY * torqueFactor * 0.05;
-                        b.vx -= tangentX * torqueFactor * 0.05;
-                        b.vy -= tangentY * torqueFactor * 0.05;
-                    }
-
-                    const absNormalVel = Math.abs(velAlongNormal);
-                    if (absNormalVel > SOUND_VELOCITY_GATE && a.soundCooldown <= 0 && b.soundCooldown <= 0) {
-                        playGoofySound('bounce', Math.min(1.5, absNormalVel / 3));
-                        a.soundCooldown = GLOBAL_SOUND_COOLDOWN;
-                        b.soundCooldown = GLOBAL_SOUND_COOLDOWN;
-                    }
                 }
+
+                wakeUpShape(a);
+                wakeUpShape(b);
             }
         }
     }

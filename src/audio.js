@@ -6,11 +6,11 @@ export function initAudio() {
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         masterCompressor = audioCtx.createDynamicsCompressor();
-        masterCompressor.threshold.setValueAtTime(-18, audioCtx.currentTime);
-        masterCompressor.knee.setValueAtTime(15, audioCtx.currentTime);
-        masterCompressor.ratio.setValueAtTime(8, audioCtx.currentTime);
-        masterCompressor.attack.setValueAtTime(0.004, audioCtx.currentTime);
-        masterCompressor.release.setValueAtTime(0.20, audioCtx.currentTime);
+        masterCompressor.threshold.setValueAtTime(-10, audioCtx.currentTime);
+        masterCompressor.knee.setValueAtTime(10, audioCtx.currentTime);
+        masterCompressor.ratio.setValueAtTime(4, audioCtx.currentTime);
+        masterCompressor.attack.setValueAtTime(0.002, audioCtx.currentTime);
+        masterCompressor.release.setValueAtTime(0.15, audioCtx.currentTime);
         masterCompressor.connect(audioCtx.destination);
     }
     if (audioCtx.state === 'suspended') {
@@ -42,7 +42,7 @@ export function playGoofySound(type, volumeFactor = 1.0) {
         mod.frequency.setValueAtTime(25, now);
         modGain.gain.setValueAtTime(40, now);
 
-        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.setValueAtTime(0.35 * volumeFactor, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
 
         mod.connect(modGain);
@@ -56,7 +56,7 @@ export function playGoofySound(type, volumeFactor = 1.0) {
         osc.stop(now + 0.22);
     }
     else if (type === 'bounce') {
-        const calculatedVolume = Math.min(0.22, 0.22 * volumeFactor);
+        const calculatedVolume = Math.min(0.4, 0.4 * volumeFactor);
         if (calculatedVolume < 0.015) return;
 
         const baseFreq = 160 + (1 - Math.min(1, volumeFactor)) * 140;
@@ -96,7 +96,7 @@ export function playGoofySound(type, volumeFactor = 1.0) {
             osc.frequency.exponentialRampToValueAtTime(freq * 1.5, now + startDelay + 0.28);
 
             gain.gain.setValueAtTime(0.0, now);
-            gain.gain.linearRampToValueAtTime(0.08, now + startDelay + 0.02);
+            gain.gain.linearRampToValueAtTime(0.15 * volumeFactor, now + startDelay + 0.02);
             gain.gain.exponentialRampToValueAtTime(0.001, now + startDelay + 0.28);
 
             osc.connect(gain);
@@ -111,7 +111,7 @@ export function playGoofySound(type, volumeFactor = 1.0) {
         const gain = audioCtx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(520, now);
-        gain.gain.setValueAtTime(0.10, now);
+        gain.gain.setValueAtTime(0.2 * volumeFactor, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
         osc.connect(gain);
         gain.connect(masterCompressor);
@@ -132,7 +132,7 @@ export function playGoofySound(type, volumeFactor = 1.0) {
         vibrato.frequency.setValueAtTime(14, now);
         vibGain.gain.setValueAtTime(15, now);
 
-        gain.gain.setValueAtTime(0.24, now);
+        gain.gain.setValueAtTime(volumeFactor, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
 
         vibrato.connect(vibGain);
