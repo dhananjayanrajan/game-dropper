@@ -1,4 +1,3 @@
-// main.js
 import './style.css';
 import { SHAPE_HIERARCHY, SHAPE_TYPES, PHYSICS_CONSTANTS } from './config.js';
 import { initAudio, playGoofySound, setMuteState } from './audio.js';
@@ -7,7 +6,7 @@ import { resetScoreDisplay, renderNextShapePreview, updateScoreDisplay } from '.
 
 import { updateDittoTransformations } from './powers/dittoPower.js';
 import { checkForBombExplosions } from './powers/bombPower.js';
-import { updateMagneticFields } from './powers/magneticPower.js';
+import { updateMagneticFields, drawMagneticRangePulse } from './powers/magneticPower.js';
 import { ComboManager } from './managers/comboManager.js';
 import { drawShapeElement } from './render/shapeRenderer.js';
 
@@ -183,6 +182,8 @@ function dropCurrentShape() {
     if (isCurrentBomb) {
       dropped.isBomb = true;
       dropped.radius = 34;
+      dropped.bombSpawnTime = gameTime;
+      dropped.bombTimerLeft = 4.0;
       dropped.vertices = [[0, -1], [0.7, -0.7], [1, 0], [0.7, 0.7], [0, 1], [-0.7, 0.7], [-1, 0], [-0.7, -0.7]];
     }
     if (isCurrentMagnetic) {
@@ -213,7 +214,7 @@ function update(dt) {
 
   for (let step = 0; step < SUB_STEPS; step++) {
     for (let s of shapes) {
-      if (s.isSleeping) continue;
+      if (s.isSleeping || s.isExploding) continue;
       s.vy += GRAVITY * substepDt;
       s.x += s.vx * substepDt;
       s.y += s.vy * substepDt;
@@ -272,12 +273,14 @@ function update(dt) {
 
       const spawned = addShape(anim.targetType, anim.targetX, anim.targetY, 0, 0, gameTime);
 
-      for (let s of shapes) {
-        if (s.id !== spawned.id) {
-          const dx = s.x - spawned.x;
-          const dy = s.y - spawned.y;
-          if (Math.hypot(dx, dy) < s.radius + spawned.radius + 20) {
-            wakeUpShape(s);
+      if (spawned) {
+        for (let s of shapes) {
+          if (s.id !== spawned.id) {
+            const dx = s.x - spawned.x;
+            const dy = s.y - spawned.y;
+            if (Math.hypot(dx, dy) < s.radius + spawned.radius + 20) {
+              wakeUpShape(s);
+            }
           }
         }
       }
@@ -301,26 +304,35 @@ function draw() {
 
   if (gameActive && !paused && currentDropType && isReadyToDrop) {
     const config = SHAPE_HIERARCHY[currentDropType];
-    const size = (isCurrentDitto || isCurrentBomb || isCurrentMagnetic) ? 34 : config.size;
-    const minX = size;
-    const maxX = canvasWidth - size;
-    const targetX = Math.max(minX, Math.min(maxX, mouseX));
-    const targetY = 40;
+    if (config) {
+      const size = (isCurrentDitto || isCurrentBomb || isCurrentMagnetic) ? 34 : config.size;
+      const minX = size;
+      const maxX = canvasWidth - size;
+      const targetX = Math.max(minX, Math.min(maxX, mouseX));
+      const targetY = 40;
 
-    ctx.strokeStyle = 'rgba(190, 204, 218, 0.4)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 6]);
-    ctx.beginPath();
-    ctx.moveTo(targetX, 80);
-    ctx.lineTo(targetX, canvasHeight);
-    ctx.stroke();
-    ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(190, 204, 218, 0.4)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(targetX, 80);
+      ctx.lineTo(targetX, canvasHeight);
+      ctx.stroke();
+      ctx.setLineDash([]);
 
-    drawShapeElement(ctx, gameTime, config.vertices, targetX, targetY, size, config.color, 0, 0.55, 1.0, 1.0, null, false, isCurrentGold, isCurrentDitto, isCurrentBomb, isCurrentMagnetic);
+      if (isCurrentMagnetic) {
+        drawMagneticRangePulse(ctx, targetX, 90, gameTime);
+      }
+
+      drawShapeElement(ctx, gameTime, config.vertices, targetX, targetY, size, config.color, 0, 0.55, 1.0, 1.0, null, false, isCurrentGold, isCurrentDitto, isCurrentBomb, isCurrentMagnetic, 4.0);
+    }
   }
 
   for (let s of shapes) {
-    drawShapeElement(ctx, gameTime, s.vertices, s.x, s.y, s.radius, s.color, s.angle, 1.0, s.currentSquishX, s.currentSquishY, s.face, s.isSleeping, s.isGold, s.isDitto, s.isBomb, s.isMagnetic);
+    if (s.isMagnetic && !s.isExploding) {
+      drawMagneticRangePulse(ctx, s.x, s.y, gameTime);
+    }
+    drawShapeElement(ctx, gameTime, s.vertices, s.x, s.y, s.radius, s.color, s.angle, 1.0, s.currentSquishX, s.currentSquishY, s.face, s.isSleeping, s.isGold, s.isDitto, s.isBomb, s.isMagnetic, s.bombTimerLeft);
   }
 
   for (let anim of mergingAnimations) {
@@ -354,12 +366,12 @@ function draw() {
     const curY2 = anim.y2 + (anim.targetY - anim.y2) * t;
     const curR2 = anim.radius2 * (1 - t);
 
-    if (curR1 > 1) drawShapeElement(ctx, gameTime, anim.vertices1, curX1, curY1, curR1, anim.color1, anim.angle1, 1 - t, 1.0, 1.0, null, false, anim.shape1Gold, false, false, false);
-    if (curR2 > 1) drawShapeElement(ctx, gameTime, anim.vertices2, curX2, curY2, curR2, anim.color2, anim.angle2, 1 - t, 1.0, 1.0, null, false, anim.shape2Gold, false, false, false);
+    if (curR1 > 1) drawShapeElement(ctx, gameTime, anim.vertices1, curX1, curY1, curR1, anim.color1, anim.angle1, 1 - t, 1.0, 1.0, null, false, anim.shape1Gold, false, false, false, null);
+    if (curR2 > 1) drawShapeElement(ctx, gameTime, anim.vertices2, curX2, curY2, curR2, anim.color2, anim.angle2, 1 - t, 1.0, 1.0, null, false, anim.shape2Gold, false, false, false, null);
 
     const spawnR = anim.targetRadius * t;
     if (spawnR > 1) {
-      drawShapeElement(ctx, gameTime, anim.targetVertices, anim.targetX, anim.targetY, spawnR, anim.targetColor, 0, t, 1.0, 1.0, null, false, false, false, false, false);
+      drawShapeElement(ctx, gameTime, anim.targetVertices, anim.targetX, anim.targetY, spawnR, anim.targetColor, 0, t, 1.0, 1.0, null, false, false, false, false, false, null);
     }
   }
 }

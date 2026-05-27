@@ -1,4 +1,3 @@
-// physics.js
 import { SHAPE_HIERARCHY, SHAPE_TYPES, FACES, PHYSICS_CONSTANTS } from './config.js';
 import { playGoofySound } from './audio.js';
 import { updateScoreDisplay } from './ui.js';
@@ -38,7 +37,16 @@ export function addShape(type, x, y, vx = 0, vy = 0, gameTime) {
         face: FACES[Math.floor(Math.random() * FACES.length)],
         isSleeping: false,
         sleepTimer: 0,
-        soundCooldown: 0
+        soundCooldown: 0,
+        isGold: false,
+        isDitto: false,
+        isBomb: false,
+        isMagnetic: false,
+        isExploding: false,
+        bombSpawnTime: null,
+        bombTimerLeft: null,
+        magneticStartTime: null,
+        magneticTargetType: ''
     };
     shapes.push(newShape);
     return newShape;
@@ -64,6 +72,7 @@ function triggerMergeAnimation(shapeA, shapeB, nextType) {
         vertices1: shapeA.vertices,
         angle1: shapeA.angle,
         face1: shapeA.face,
+        shape1Gold: shapeA.isGold,
         x2: shapeB.x,
         y2: shapeB.y,
         color2: shapeB.color,
@@ -71,6 +80,7 @@ function triggerMergeAnimation(shapeA, shapeB, nextType) {
         vertices2: shapeB.vertices,
         angle2: shapeB.angle,
         face2: shapeB.face,
+        shape2Gold: shapeB.isGold,
         targetX: midX,
         targetY: midY,
         targetType: nextType,
@@ -79,7 +89,8 @@ function triggerMergeAnimation(shapeA, shapeB, nextType) {
         targetVertices: targetConfig.vertices,
         targetFace: FACES[Math.floor(Math.random() * FACES.length)],
         progress: 0,
-        duration: 0.12
+        duration: 0.12,
+        isBombFlash: false
     });
     playGoofySound('merge');
 }
@@ -121,7 +132,7 @@ export function checkCollisions(playArea) {
             s.angularVelocity = Math.sign(s.angularVelocity) * MAX_ANGULAR_SPEED;
         }
 
-        if (s.isSleeping) continue;
+        if (s.isSleeping || s.isExploding) continue;
 
         const r = s.radius;
         let boundaryHit = false;
@@ -166,6 +177,7 @@ export function checkCollisions(playArea) {
             const a = shapes[i];
             const b = shapes[j];
 
+            if (a.isExploding || b.isExploding) continue;
             if (a.isSleeping && b.isSleeping) continue;
 
             const dx = b.x - a.x;
@@ -174,7 +186,46 @@ export function checkCollisions(playArea) {
             const minDist = a.radius + b.radius;
 
             if (dist < minDist) {
-                if (a.type === b.type) {
+                if (a.isBomb || b.isBomb || a.isMagnetic || b.isMagnetic) {
+                    const nx = dx / (dist || 1);
+                    const ny = dy / (dist || 1);
+                    const relVx = b.vx - a.vx;
+                    const relVy = b.vy - a.vy;
+                    const velAlongNormal = relVx * nx + relVy * ny;
+
+                    const overlap = minDist - dist;
+                    const correctionX = nx * overlap * POSITION_CORRECTION_PERCENT;
+                    const correctionY = ny * overlap * POSITION_CORRECTION_PERCENT;
+
+                    if (!a.isSleeping) {
+                        a.x -= correctionX * 0.5;
+                        a.y -= correctionY * 0.5;
+                    }
+                    if (!b.isSleeping) {
+                        b.x += correctionX * 0.5;
+                        b.y += correctionY * 0.5;
+                    }
+
+                    if (velAlongNormal < 0) {
+                        const jScalar = -(1 + BOUNCE) * velAlongNormal / 2;
+                        const impulseX = jScalar * nx;
+                        const impulseY = jScalar * ny;
+
+                        if (!a.isSleeping) {
+                            a.vx -= impulseX;
+                            a.vy -= impulseY;
+                        }
+                        if (!b.isSleeping) {
+                            b.vx += impulseX;
+                            b.vy += impulseY;
+                        }
+                    }
+                    wakeUpShape(a);
+                    wakeUpShape(b);
+                    continue;
+                }
+
+                if (a.type === b.type && !a.isDitto && !b.isDitto) {
                     mergeShapes(a, b);
                     return;
                 }
@@ -238,6 +289,12 @@ export function checkCollisions(playArea) {
         } else {
             s.sleepTimer = 0;
             s.isSleeping = false;
+        }
+    }
+
+    for (let i = shapes.length - 1; i >= 0; i--) {
+        if (shapes[i].isExploding) {
+            shapes.splice(i, 1);
         }
     }
 }
