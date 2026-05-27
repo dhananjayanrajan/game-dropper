@@ -30,7 +30,7 @@
             class="active:translate-y-[2px] active:shadow-none transition-all bg-[#ff4b4b] hover:bg-[#ff5f5f] border-2 border-[#ea2b2b] text-white rounded-2xl w-12 h-12 flex items-center justify-center text-lg font-bold cursor-pointer shadow-[0_4px_0_0_#ea2b2b]">🔄</button>
         </div>
       </div>
-      <div class="flex justify-center">
+      <div class="flex justify-center gap-4 items-center">
         <div
           class="bg-[#ffc800] border-2 border-[#e6b400] rounded-2xl px-10 py-2.5 flex items-center gap-2 text-white font-black text-3xl tracking-wide shadow-[0_4px_0_0_#e6b400]">
           <span class="drop-shadow-[0_2px_0_rgba(0,0,0,0.15)]">⭐</span>
@@ -51,6 +51,14 @@
           <span id="nextShapeName" class="text-base font-black text-[#475569]"></span>
           <div id="nextShapePreview"
             class="w-12 h-12 rounded-2xl border-2 border-[#e2e8f0] bg-white shadow-[0_3px_0_0_#e2e8f0]"></div>
+        </div>
+      </div>
+      <div class="mt-3 bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-2xl p-3">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-xs font-black text-[#1cb0f6] uppercase tracking-wider">Power Up Queue</span>
+          <span id="activePowerBadge" class="text-xs font-bold text-[#58cc02] hidden">ACTIVE</span>
+        </div>
+        <div id="powerUpQueue" class="flex gap-2 overflow-x-auto">
         </div>
       </div>
     </div>

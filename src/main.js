@@ -43,6 +43,10 @@ let nextMagneticTarget = '';
 let currentComboMultiplier = 1;
 let audioInitialized = false;
 
+let powerUpQueue = [];
+let activePowerUp = null;
+let powerUpDropCounter = 0;
+
 const comboManager = new ComboManager((count, multiplier) => {
   currentComboMultiplier = multiplier;
 });
@@ -57,6 +61,151 @@ const pauseBtn = document.getElementById('pauseBtn');
 const resetBtn = document.getElementById('resetBtn');
 const gameOverlay = document.getElementById('gameLostOverlay');
 const restartBtn = document.getElementById('restartGameBtn');
+const powerUpQueueDiv = document.getElementById('powerUpQueue');
+
+function generateRandomPowerUp() {
+  const random = Math.random();
+
+  if (random < 0.25) {
+    return {
+      type: 'gold',
+      gold: true,
+      ditto: false,
+      bomb: false,
+      magnetic: false,
+      splitter: false,
+      magneticTarget: null
+    };
+  } else if (random < 0.45) {
+    return {
+      type: 'ditto',
+      gold: false,
+      ditto: true,
+      bomb: false,
+      magnetic: false,
+      splitter: false,
+      magneticTarget: null
+    };
+  } else if (random < 0.65) {
+    return {
+      type: 'bomb',
+      gold: false,
+      ditto: false,
+      bomb: true,
+      magnetic: false,
+      splitter: false,
+      magneticTarget: null
+    };
+  } else if (random < 0.85) {
+    return {
+      type: 'magnetic',
+      gold: false,
+      ditto: false,
+      bomb: false,
+      magnetic: true,
+      splitter: false,
+      magneticTarget: SHAPE_TYPES[Math.floor(Math.random() * 4)]
+    };
+  } else {
+    return {
+      type: 'splitter',
+      gold: false,
+      ditto: false,
+      bomb: false,
+      magnetic: false,
+      splitter: true,
+      magneticTarget: null
+    };
+  }
+}
+
+function addPowerUpToQueue() {
+  const powerUp = generateRandomPowerUp();
+  powerUpQueue.push(powerUp);
+  if (powerUpQueue.length > 5) {
+    powerUpQueue.shift();
+  }
+  updatePowerUpQueueUI();
+}
+
+function updatePowerUpQueueUI() {
+  if (!powerUpQueueDiv) return;
+
+  powerUpQueueDiv.innerHTML = '';
+
+  powerUpQueue.forEach((powerUp, index) => {
+    const isActive = (activePowerUp === powerUp);
+    const powerDiv = document.createElement('div');
+    powerDiv.className = `flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all ${isActive ? 'border-[#58cc02] bg-[#58cc02]/10 shadow-lg scale-105' : 'border-[#e2e8f0] bg-white'}`;
+
+    let icon = '';
+    let bgClass = '';
+
+    if (powerUp.type === 'gold') {
+      icon = '✨';
+      bgClass = 'bg-gradient-to-br from-[#fff176] to-[#ffb300]';
+    } else if (powerUp.type === 'ditto') {
+      icon = '👥';
+      bgClass = 'bg-gradient-to-br from-[#e1bee7] to-[#ba68c8]';
+    } else if (powerUp.type === 'bomb') {
+      icon = '💣';
+      bgClass = 'bg-gradient-to-br from-[#616161] to-[#212121]';
+    } else if (powerUp.type === 'magnetic') {
+      icon = '🧲';
+      bgClass = 'bg-gradient-to-br from-[#00e5ff] to-[#0091ea]';
+    } else if (powerUp.type === 'splitter') {
+      icon = '✂️';
+      bgClass = 'bg-gradient-to-br from-[#81c784] to-[#388e3c]';
+    }
+
+    powerDiv.innerHTML = `
+      <div class="w-10 h-10 rounded-lg ${bgClass} flex items-center justify-center text-xl shadow-md">
+        ${icon}
+      </div>
+      <span class="text-xs font-bold text-[#475569]">${powerUp.type.toUpperCase()}</span>
+      ${isActive ? '<span class="text-[10px] font-black text-[#58cc02]">ACTIVE</span>' : ''}
+    `;
+
+    powerUpQueueDiv.appendChild(powerDiv);
+  });
+
+  if (powerUpQueue.length === 0) {
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'text-xs text-[#475569] font-bold p-2';
+    emptyDiv.innerText = 'No power ups in queue';
+    powerUpQueueDiv.appendChild(emptyDiv);
+  }
+}
+
+function activateNextPowerUp() {
+  if (activePowerUp) {
+    return;
+  }
+
+  if (powerUpQueue.length > 0) {
+    activePowerUp = powerUpQueue.shift();
+    powerUpDropCounter = 0;
+    updatePowerUpQueueUI();
+  }
+}
+
+function useActivePowerUp() {
+  if (!activePowerUp) return false;
+
+  isCurrentGold = activePowerUp.gold;
+  isCurrentDitto = activePowerUp.ditto;
+  isCurrentBomb = activePowerUp.bomb;
+  isCurrentMagnetic = activePowerUp.magnetic;
+  isCurrentSplitter = activePowerUp.splitter;
+  if (activePowerUp.magnetic) {
+    currentMagneticTarget = activePowerUp.magneticTarget;
+  }
+
+  activePowerUp = null;
+  updatePowerUpQueueUI();
+
+  return true;
+}
 
 function resizeCanvas() {
   const container = document.getElementById('canvasContainer');
@@ -182,6 +331,19 @@ function dropCurrentShape() {
 
   comboManager.triggerCombo(false);
 
+  if (!activePowerUp) {
+    powerUpDropCounter++;
+    if (powerUpDropCounter >= 5) {
+      activateNextPowerUp();
+    }
+  }
+
+  const powerUpUsed = useActivePowerUp();
+
+  if (!currentDropType || !SHAPE_HIERARCHY[currentDropType]) {
+    currentDropType = SHAPE_TYPES[0];
+  }
+
   const config = SHAPE_HIERARCHY[currentDropType];
   const size = (isCurrentDitto || isCurrentBomb || isCurrentMagnetic || isCurrentSplitter) ? 34 : config.size;
 
@@ -224,7 +386,19 @@ function dropCurrentShape() {
   }
 
   playGoofySound('drop');
-  generateNextShapes();
+
+  if (!powerUpUsed) {
+    generateNextShapes();
+  } else {
+    isCurrentGold = false;
+    isCurrentDitto = false;
+    isCurrentBomb = false;
+    isCurrentMagnetic = false;
+    isCurrentSplitter = false;
+    currentMagneticTarget = '';
+    generateNextShapes();
+  }
+
   setTimeout(() => { isReadyToDrop = true; }, 300);
 }
 
@@ -337,30 +511,28 @@ function draw() {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  if (gameActive && !paused && currentDropType && isReadyToDrop) {
+  if (gameActive && !paused && currentDropType && isReadyToDrop && SHAPE_HIERARCHY[currentDropType]) {
     const config = SHAPE_HIERARCHY[currentDropType];
-    if (config) {
-      const size = (isCurrentDitto || isCurrentBomb || isCurrentMagnetic || isCurrentSplitter) ? 34 : config.size;
-      const minX = size;
-      const maxX = canvasWidth - size;
-      const targetX = Math.max(minX, Math.min(maxX, mouseX));
-      const targetY = 40;
+    const size = (isCurrentDitto || isCurrentBomb || isCurrentMagnetic || isCurrentSplitter) ? 34 : config.size;
+    const minX = size;
+    const maxX = canvasWidth - size;
+    const targetX = Math.max(minX, Math.min(maxX, mouseX));
+    const targetY = 40;
 
-      ctx.strokeStyle = 'rgba(190, 204, 218, 0.4)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 6]);
-      ctx.beginPath();
-      ctx.moveTo(targetX, 80);
-      ctx.lineTo(targetX, canvasHeight);
-      ctx.stroke();
-      ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(190, 204, 218, 0.4)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(targetX, 80);
+    ctx.lineTo(targetX, canvasHeight);
+    ctx.stroke();
+    ctx.setLineDash([]);
 
-      if (isCurrentMagnetic) {
-        drawMagneticRangePulse(ctx, targetX, 90, gameTime);
-      }
-
-      drawShapeElement(ctx, gameTime, config.vertices, targetX, targetY, size, config.color, 0, 0.55, 1.0, 1.0, null, false, isCurrentGold, isCurrentDitto, isCurrentBomb, isCurrentMagnetic, 4.0);
+    if (isCurrentMagnetic) {
+      drawMagneticRangePulse(ctx, targetX, 90, gameTime);
     }
+
+    drawShapeElement(ctx, gameTime, config.vertices, targetX, targetY, size, config.color, 0, 0.55, 1.0, 1.0, null, false, isCurrentGold, isCurrentDitto, isCurrentBomb, isCurrentMagnetic, 4.0);
   }
 
   for (let s of shapes) {
@@ -462,6 +634,17 @@ function resetGame() {
   timerDisplay.innerText = '0.0';
   pauseBtn.innerText = "⏸️";
   gameOverlay.classList.add('hidden');
+
+  powerUpQueue = [];
+  activePowerUp = null;
+  powerUpDropCounter = 0;
+
+  for (let i = 0; i < 3; i++) {
+    addPowerUpToQueue();
+  }
+
+  updatePowerUpQueueUI();
+
   generateNextShapes();
 }
 
