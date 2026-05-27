@@ -1,36 +1,58 @@
-// comboManager.js
+// src/managers/comboManager.js
 export class ComboManager {
     constructor(onUpdate) {
         this.comboCount = 0;
         this.comboMultiplier = 1;
+        this.goldChainCount = 0;
         this.comboTimer = null;
         this.onUpdate = onUpdate;
+        this.pendingGoldMerge = false;
+        this.goldMergeOneGold = false;
     }
-    triggerCombo(isMerge) {
+
+    triggerCombo(isMerge, hasGold = false, bothGold = false) {
         if (isMerge) {
             this.comboCount++;
             if (this.comboCount >= 6) this.comboMultiplier = 4;
             else if (this.comboCount >= 4) this.comboMultiplier = 3;
             else if (this.comboCount >= 2) this.comboMultiplier = 2;
             else this.comboMultiplier = 1;
+
+            if (hasGold) {
+                if (this.comboCount === 1 || this.goldChainCount === 0) {
+                    this.goldChainCount = 1;
+                } else {
+                    this.goldChainCount++;
+                }
+            }
+
             if (this.comboTimer) clearTimeout(this.comboTimer);
-            this.comboTimer = setTimeout(() => {
-                this.resetCombo();
-            }, 3000);
+            this.comboTimer = setTimeout(() => this.resetCombo(), 3000);
         } else {
             this.resetCombo();
         }
         this.updateComboUI();
     }
+
+    getGoldMultiplier(oneGold) {
+        let base = oneGold ? 5 : 10;
+        if (this.goldChainCount > 1) {
+            return base * Math.pow(2, this.goldChainCount - 1);
+        }
+        return base;
+    }
+
     resetCombo() {
         this.comboCount = 0;
         this.comboMultiplier = 1;
+        this.goldChainCount = 0;
         if (this.comboTimer) {
             clearTimeout(this.comboTimer);
             this.comboTimer = null;
         }
         this.updateComboUI();
     }
+
     updateComboUI() {
         let container = document.getElementById('comboContainer');
         if (!container) {
@@ -42,13 +64,10 @@ export class ComboManager {
             textElem.className = 'bg-[#1cb0f6] border-2 border-[#1899d6] rounded-xl px-4 py-1 text-white font-black text-sm tracking-wider uppercase shadow-[0_3px_0_0_#1899d6]';
             const multElem = document.createElement('div');
             multElem.id = 'comboMult';
-            multElem.className = 'bg-[#ffc800] border-2 border-[#e6b400] rounded-xl px-4 py-1 text-white font-black text-2xl text-center shadow-[0_3px_0_0_#e6b400]';
+            multElem.className = 'bg-[#ffc800] border-2 border-[#e6b400] rounded-xl px-4 py-1 text-white font-black text-2xl text-center shadow-[0_3px_0_0_#e6b400] animate-bounce';
             container.appendChild(textElem);
             container.appendChild(multElem);
-            const canvasContainer = document.getElementById('canvasContainer');
-            if (canvasContainer) {
-                canvasContainer.appendChild(container);
-            }
+            document.getElementById('canvasContainer').appendChild(container);
         }
         if (this.comboCount >= 2) {
             document.getElementById('comboText').innerText = `${this.comboCount} MERGE COMBO!`;
@@ -59,8 +78,6 @@ export class ComboManager {
             container.classList.remove('scale-100', 'opacity-100');
             container.classList.add('scale-0', 'opacity-0');
         }
-        if (this.onUpdate) {
-            this.onUpdate(this.comboCount, this.comboMultiplier);
-        }
+        if (this.onUpdate) this.onUpdate(this.comboCount, this.comboMultiplier, this.goldChainCount);
     }
 }

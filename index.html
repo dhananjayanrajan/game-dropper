@@ -9,6 +9,26 @@
     rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    * {
+      font-family: 'Quicksand', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #f7fafc;
+    }
+
+    #gameCanvas {
+      touch-action: none;
+      display: block;
+    }
+
     #powerUpQueue::-webkit-scrollbar {
       height: 4px;
     }
@@ -28,12 +48,15 @@
       min-width: 75px;
       width: 75px;
     }
+
+    .hidden {
+      display: none !important;
+    }
   </style>
 </head>
 
 <body class="m-0 p-0 w-screen h-screen overflow-hidden bg-[#f1f5f9] flex items-center justify-center select-none">
   <div id="gameContainer" class="relative w-full h-full bg-[#ffffff] overflow-hidden flex flex-col">
-
     <div class="p-4 flex flex-col gap-3 shrink-0 bg-[#ffffff] border-b-2 border-[#e2e8f0]">
       <div class="flex justify-between items-center">
         <div
@@ -58,24 +81,21 @@
         </div>
       </div>
     </div>
-
     <div id="canvasContainer" class="flex-1 relative w-full overflow-hidden bg-[#f8fafc]">
       <canvas id="gameCanvas" class="w-full h-full block"></canvas>
     </div>
-
     <div class="shrink-0 bg-[#ffffff] border-t-2 border-[#e2e8f0] p-4">
       <div class="bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-2xl p-3">
         <div class="flex justify-between items-center mb-2 px-1">
           <span class="text-xs font-black text-[#1cb0f6] uppercase tracking-wider">Drop Queue</span>
           <span id="activePowerBadge"
-            class="text-xs font-bold text-[#58cc02] hidden bg-[#58cc02]/20 px-2 py-1 rounded-full">POWER UP
+            class="text-xs font-bold text-[#58cc02] bg-[#58cc02]/20 px-2 py-1 rounded-full hidden">POWER UP
             ACTIVE</span>
         </div>
         <div id="powerUpQueue" class="flex gap-3 overflow-x-auto pb-2"></div>
       </div>
     </div>
-
-    <div id="gameLostOverlay" class="hidden fixed inset-0 bg-[#ffffff]/95 flex items-center justify-center z-30">
+    <div id="gameLostOverlay" class="fixed inset-0 bg-[#ffffff]/95 flex items-center justify-center z-30 hidden">
       <div
         class="bg-[#ffffff] border-4 border-[#ff4b4b] rounded-3xl p-8 text-center max-w-xs mx-4 shadow-[0_8px_0_0_#ff4b4b]">
         <div class="text-7xl mb-4">👑💥</div>
@@ -87,7 +107,6 @@
       </div>
     </div>
   </div>
-
   <script type="module" src="/src/main.js"></script>
 </body>
 

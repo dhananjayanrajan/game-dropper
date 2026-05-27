@@ -1,11 +1,17 @@
-// ui.js
-export let globalScore = 0;
-const scoreDisplay = document.getElementById('scoreDisplay');
+// src/ui.js
+let score = 0;
+
 export function resetScoreDisplay() {
-    globalScore = 0;
-    scoreDisplay.innerText = '0';
+    score = 0;
+    document.getElementById('scoreDisplay').innerText = '0';
 }
+
 export function updateScoreDisplay(amount) {
-    globalScore += amount;
-    scoreDisplay.innerText = globalScore;
+    score += amount;
+    document.getElementById('scoreDisplay').innerText = Math.floor(score);
+}
+
+export function addDropScorePenalty(penalty) {
+    score += penalty;
+    document.getElementById('scoreDisplay').innerText = Math.floor(score);
 }
