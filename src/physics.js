@@ -128,7 +128,17 @@ export function checkCollisions(playArea, gameTime) {
 
         if (s.isSleeping || s.isExploding) continue;
 
-        if (s.isMagnetic) continue;
+        if (s.isMagnetic) {
+            if (s.y + s.radius < playArea.y + playArea.height) {
+                s.vy += 0.32;
+                s.y += s.vy;
+                if (s.y + s.radius > playArea.y + playArea.height) {
+                    s.y = playArea.y + playArea.height - s.radius;
+                    s.vy = 0;
+                }
+            }
+            continue;
+        }
 
         const r = s.radius;
         let boundaryHit = false;
@@ -176,7 +186,45 @@ export function checkCollisions(playArea, gameTime) {
             if (a.isExploding || b.isExploding) continue;
             if (a.isSleeping && b.isSleeping) continue;
 
-            if (a.isMagnetic || b.isMagnetic) continue;
+            if (a.isMagnetic || b.isMagnetic) {
+                const magnetic = a.isMagnetic ? a : b;
+                const other = a.isMagnetic ? b : a;
+
+                const dx = other.x - magnetic.x;
+                const dy = other.y - magnetic.y;
+                const dist = Math.hypot(dx, dy);
+                const minDist = other.radius + magnetic.radius;
+
+                if (dist < minDist) {
+                    const nx = dx / (dist || 1);
+                    const ny = dy / (dist || 1);
+                    const overlap = minDist - dist;
+                    const correctionX = nx * overlap;
+                    const correctionY = ny * overlap;
+
+                    other.x += correctionX;
+                    other.y += correctionY;
+
+                    if (other.y + other.radius > magnetic.y - magnetic.radius) {
+                        other.y = magnetic.y - magnetic.radius - other.radius;
+                    }
+
+                    const relVx = other.vx - magnetic.vx;
+                    const relVy = other.vy - magnetic.vy;
+                    const velAlongNormal = relVx * nx + relVy * ny;
+
+                    if (velAlongNormal < 0) {
+                        const jScalar = -(1 + BOUNCE) * velAlongNormal;
+                        const impulseX = jScalar * nx;
+                        const impulseY = jScalar * ny;
+                        other.vx -= impulseX;
+                        other.vy -= impulseY;
+                    }
+
+                    wakeUpShape(other);
+                }
+                continue;
+            }
 
             const dx = b.x - a.x;
             const dy = b.y - a.y;
@@ -217,11 +265,11 @@ export function checkCollisions(playArea, gameTime) {
                     const correctionX = nx * overlap * POSITION_CORRECTION_PERCENT;
                     const correctionY = ny * overlap * POSITION_CORRECTION_PERCENT;
 
-                    if (!a.isSleeping && !a.isMagnetic) {
+                    if (!a.isSleeping) {
                         a.x -= correctionX * 0.5;
                         a.y -= correctionY * 0.5;
                     }
-                    if (!b.isSleeping && !b.isMagnetic) {
+                    if (!b.isSleeping) {
                         b.x += correctionX * 0.5;
                         b.y += correctionY * 0.5;
                     }
@@ -231,11 +279,11 @@ export function checkCollisions(playArea, gameTime) {
                         const impulseX = jScalar * nx;
                         const impulseY = jScalar * ny;
 
-                        if (!a.isSleeping && !a.isMagnetic) {
+                        if (!a.isSleeping) {
                             a.vx -= impulseX;
                             a.vy -= impulseY;
                         }
-                        if (!b.isSleeping && !b.isMagnetic) {
+                        if (!b.isSleeping) {
                             b.vx += impulseX;
                             b.vy += impulseY;
                         }
@@ -263,11 +311,11 @@ export function checkCollisions(playArea, gameTime) {
                 const correctionX = nx * overlap * POSITION_CORRECTION_PERCENT;
                 const correctionY = ny * overlap * POSITION_CORRECTION_PERCENT;
 
-                if (!a.isSleeping && !a.isMagnetic) {
+                if (!a.isSleeping) {
                     a.x -= correctionX * 0.5;
                     a.y -= correctionY * 0.5;
                 }
-                if (!b.isSleeping && !b.isMagnetic) {
+                if (!b.isSleeping) {
                     b.x += correctionX * 0.5;
                     b.y += correctionY * 0.5;
                 }
@@ -276,11 +324,11 @@ export function checkCollisions(playArea, gameTime) {
                 const impulseX = jScalar * nx;
                 const impulseY = jScalar * ny;
 
-                if (!a.isSleeping && !a.isMagnetic) {
+                if (!a.isSleeping) {
                     a.vx -= impulseX;
                     a.vy -= impulseY;
                 }
-                if (!b.isSleeping && !b.isMagnetic) {
+                if (!b.isSleeping) {
                     b.vx += impulseX;
                     b.vy += impulseY;
                 }
@@ -296,9 +344,8 @@ export function checkCollisions(playArea, gameTime) {
         if (s.soundCooldown > 0) s.soundCooldown--;
 
         if (s.isMagnetic) {
-            s.isSleeping = true;
+            s.isSleeping = false;
             s.vx = 0;
-            s.vy = 0;
             s.angularVelocity = 0;
             continue;
         }
