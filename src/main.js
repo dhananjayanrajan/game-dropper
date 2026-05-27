@@ -7,6 +7,7 @@ import { resetScoreDisplay, renderNextShapePreview, updateScoreDisplay } from '.
 import { updateDittoTransformations } from './powers/dittoPower.js';
 import { checkForBombExplosions } from './powers/bombPower.js';
 import { updateMagneticFields, drawMagneticRangePulse } from './powers/magneticPower.js';
+import { drawSplitterEffect } from './powers/splitterPower.js';
 import { ComboManager } from './managers/comboManager.js';
 import { drawShapeElement } from './render/shapeRenderer.js';
 
@@ -34,6 +35,8 @@ let isCurrentBomb = false;
 let isNextBomb = false;
 let isCurrentMagnetic = false;
 let isNextMagnetic = false;
+let isCurrentSplitter = false;
+let isNextSplitter = false;
 let currentMagneticTarget = '';
 let nextMagneticTarget = '';
 
@@ -81,6 +84,7 @@ function generateNextShapes() {
     isCurrentDitto = false;
     isCurrentBomb = false;
     isCurrentMagnetic = false;
+    isCurrentSplitter = false;
     currentMagneticTarget = '';
   } else {
     currentDropType = nextDropType;
@@ -88,6 +92,7 @@ function generateNextShapes() {
     isCurrentDitto = isNextDitto;
     isCurrentBomb = isNextBomb;
     isCurrentMagnetic = isNextMagnetic;
+    isCurrentSplitter = isNextSplitter;
     currentMagneticTarget = nextMagneticTarget;
   }
 
@@ -99,6 +104,15 @@ function generateNextShapes() {
     isNextDitto = false;
     isNextBomb = false;
     isNextMagnetic = false;
+    isNextSplitter = false;
+    nextMagneticTarget = '';
+  } else if (dropCounter % 25 === 0) {
+    nextDropType = 'Cherry';
+    isNextGold = false;
+    isNextDitto = false;
+    isNextBomb = false;
+    isNextMagnetic = false;
+    isNextSplitter = true;
     nextMagneticTarget = '';
   } else if (dropCounter % 15 === 0) {
     nextDropType = 'Cherry';
@@ -106,6 +120,7 @@ function generateNextShapes() {
     isNextDitto = true;
     isNextBomb = false;
     isNextMagnetic = false;
+    isNextSplitter = false;
     nextMagneticTarget = '';
   } else if (dropCounter % 12 === 0) {
     nextDropType = 'Cherry';
@@ -113,6 +128,7 @@ function generateNextShapes() {
     isNextDitto = false;
     isNextBomb = true;
     isNextMagnetic = false;
+    isNextSplitter = false;
     nextMagneticTarget = '';
   } else if (dropCounter % 9 === 0) {
     nextDropType = 'Cherry';
@@ -120,6 +136,7 @@ function generateNextShapes() {
     isNextDitto = false;
     isNextBomb = false;
     isNextMagnetic = true;
+    isNextSplitter = false;
     nextMagneticTarget = SHAPE_TYPES[Math.floor(Math.random() * 4)];
   } else {
     nextDropType = SHAPE_TYPES[Math.floor(Math.random() * 5)];
@@ -127,6 +144,7 @@ function generateNextShapes() {
     isNextDitto = false;
     isNextBomb = false;
     isNextMagnetic = false;
+    isNextSplitter = false;
     nextMagneticTarget = '';
   }
 
@@ -136,6 +154,8 @@ function generateNextShapes() {
     renderNextShapePreview("💣 BOMB FRUIT", { color: '#424242' });
   } else if (isNextMagnetic) {
     renderNextShapePreview(`🧲 MAG: ${nextMagneticTarget.toUpperCase()}`, { color: '#00e5ff' });
+  } else if (isNextSplitter) {
+    renderNextShapePreview("✂️ SPLITTER", { color: '#4caf50' });
   } else {
     renderNextShapePreview(isNextGold ? "✨ SHINY GOLD" : nextDropType, SHAPE_HIERARCHY[nextDropType]);
   }
@@ -161,14 +181,14 @@ function dropCurrentShape() {
   comboManager.triggerCombo(false);
 
   const config = SHAPE_HIERARCHY[currentDropType];
-  const size = (isCurrentDitto || isCurrentBomb || isCurrentMagnetic) ? 34 : config.size;
+  const size = (isCurrentDitto || isCurrentBomb || isCurrentMagnetic || isCurrentSplitter) ? 34 : config.size;
 
   const minX = size;
   const maxX = canvasWidth - size;
   const dropX = Math.max(minX, Math.min(maxX, mouseX));
   const dropY = 90;
 
-  const dropped = addShape(currentDropType, dropX, dropY, 0, 0, gameTime);
+  const dropped = addShape(currentDropType, dropX, dropY, 0, 0, gameTime, isCurrentSplitter);
   if (dropped) {
     dropped.vy = 1.5;
     if (isCurrentGold) {
@@ -239,7 +259,7 @@ function update(dt) {
         if (s.vx > 0) s.vx = -s.vx * BOUNCE;
       }
     }
-    checkCollisions(playArea);
+    checkCollisions(playArea, gameTime);
   }
 
   for (let s of shapes) {
@@ -305,7 +325,7 @@ function draw() {
   if (gameActive && !paused && currentDropType && isReadyToDrop) {
     const config = SHAPE_HIERARCHY[currentDropType];
     if (config) {
-      const size = (isCurrentDitto || isCurrentBomb || isCurrentMagnetic) ? 34 : config.size;
+      const size = (isCurrentDitto || isCurrentBomb || isCurrentMagnetic || isCurrentSplitter) ? 34 : config.size;
       const minX = size;
       const maxX = canvasWidth - size;
       const targetX = Math.max(minX, Math.min(maxX, mouseX));
@@ -331,6 +351,9 @@ function draw() {
   for (let s of shapes) {
     if (s.isMagnetic && !s.isExploding) {
       drawMagneticRangePulse(ctx, s.x, s.y, gameTime);
+    }
+    if (s.isSplitter && !s.isExploding) {
+      drawSplitterEffect(ctx, s.radius, gameTime);
     }
     drawShapeElement(ctx, gameTime, s.vertices, s.x, s.y, s.radius, s.color, s.angle, 1.0, s.currentSquishX, s.currentSquishY, s.face, s.isSleeping, s.isGold, s.isDitto, s.isBomb, s.isMagnetic, s.bombTimerLeft);
   }
@@ -406,6 +429,8 @@ function resetGame() {
   isNextBomb = false;
   isCurrentMagnetic = false;
   isNextMagnetic = false;
+  isCurrentSplitter = false;
+  isNextSplitter = false;
   currentMagneticTarget = '';
   nextMagneticTarget = '';
   resetScoreDisplay();

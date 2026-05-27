@@ -1,6 +1,7 @@
 import { SHAPE_HIERARCHY, SHAPE_TYPES, FACES, PHYSICS_CONSTANTS } from './config.js';
 import { playGoofySound } from './audio.js';
 import { updateScoreDisplay } from './ui.js';
+import { handleSplitterActivation } from './powers/splitterPower.js';
 
 export let shapes = [];
 export let mergingAnimations = [];
@@ -12,7 +13,7 @@ export function clearPhysicsState() {
     nextId = 1;
 }
 
-export function addShape(type, x, y, vx = 0, vy = 0, gameTime) {
+export function addShape(type, x, y, vx = 0, vy = 0, gameTime, isSplitter = false) {
     const config = SHAPE_HIERARCHY[type];
     let momentOfInertia = 0.5 * config.size * config.size;
 
@@ -42,6 +43,7 @@ export function addShape(type, x, y, vx = 0, vy = 0, gameTime) {
         isDitto: false,
         isBomb: false,
         isMagnetic: false,
+        isSplitter: isSplitter,
         isExploding: false,
         bombSpawnTime: null,
         bombTimerLeft: null,
@@ -113,7 +115,7 @@ function mergeShapes(shapeA, shapeB) {
     }
 }
 
-export function checkCollisions(playArea) {
+export function checkCollisions(playArea, gameTime) {
     const {
         BOUNCE, ROLLING_GRIP, SOUND_VELOCITY_GATE, GLOBAL_SOUND_COOLDOWN,
         POSITION_CORRECTION_PERCENT, MAX_LINEAR_SPEED, MAX_ANGULAR_SPEED,
@@ -186,6 +188,21 @@ export function checkCollisions(playArea) {
             const minDist = a.radius + b.radius;
 
             if (dist < minDist) {
+                if (a.isSplitter || b.isSplitter) {
+                    const splitter = a.isSplitter ? a : b;
+                    const target = a.isSplitter ? b : a;
+
+                    if (!target.isSplitter && !target.isExploding && !target.isBomb && !target.isGold) {
+                        const results = handleSplitterActivation(splitter, shapes);
+                        if (results) {
+                            shapes.splice(shapes.indexOf(splitter), 1);
+                            shapes.splice(shapes.indexOf(target), 1);
+                            results.forEach(ns => addShape(ns.type, ns.x, ns.y, ns.vx, ns.vy, gameTime));
+                            return;
+                        }
+                    }
+                }
+
                 if (a.isBomb || b.isBomb || a.isMagnetic || b.isMagnetic) {
                     const nx = dx / (dist || 1);
                     const ny = dy / (dist || 1);
