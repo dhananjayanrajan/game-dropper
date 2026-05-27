@@ -8,138 +8,62 @@
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    * {
-      font-family: 'Quicksand', sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    body,
-    html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #e0e8f0;
-    }
-
-    #mobileWrapper {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      background: #e0e8f0;
-      overflow: hidden;
-    }
-
-    @media (min-width: 640px) {
-      body {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      #mobileWrapper {
-        width: 440px;
-        height: 780px;
-        border-radius: 40px;
-        border: 12px solid #d2dee9;
-        box-shadow: inset 6px 6px 12px #beccda, inset -6px -6px 12px #ffffff;
-      }
-    }
-
-    #canvasContainer {
-      position: absolute;
-      top: 106px;
-      bottom: 85px;
-      left: 0;
-      right: 0;
-    }
-
-    #gameCanvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    .iconBtn {
-      transition: all 0.1s ease;
-      cursor: pointer;
-    }
-
-    .iconBtn:active {
-      transform: scale(0.95);
-    }
-
-    #gameLostOverlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(224, 232, 240, 0.95);
-      backdrop-filter: blur(8px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 30;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-  </style>
 </head>
 
-<body>
-  <div id="mobileWrapper">
-    <div class="absolute top-0 left-0 right-0 z-20 p-4 flex flex-col gap-2">
+<body class="m-0 p-0 w-full h-full overflow-hidden bg-[#f1f5f9] sm:flex sm:items-center sm:justify-center select-none">
+  <div id="mobileWrapper"
+    class="relative w-full h-full bg-[#ffffff] overflow-hidden flex flex-col sm:w-[440px] sm:h-[780px] sm:rounded-3xl sm:border-4 sm:border-[#e2e8f0] sm:shadow-xl">
+
+    <div class="relative z-20 p-4 flex flex-col gap-3 shrink-0 bg-[#ffffff] border-b-2 border-[#e2e8f0]">
       <div class="flex justify-between items-center">
         <div
-          class="bg-[#e0e8f0] border border-white/60 shadow-[5px_5px_10px_#beccda,-5px_-5px_10px_#ffffff] rounded-full px-4 py-1.5 flex items-center gap-1.5">
-          <span class="text-base">⏱️</span>
-          <span id="timerDisplay" class="font-extrabold text-base text-stone-700">0.0</span>
+          class="bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-2xl px-4 py-2 flex items-center gap-2 shadow-[0_2px_0_0_#e2e8f0]">
+          <span class="text-lg">⏱️</span>
+          <span id="timerDisplay" class="font-black text-base text-[#475569]">0.0</span>
         </div>
         <div class="flex gap-2">
           <button id="muteBtn"
-            class="iconBtn bg-[#e0e8f0] border border-white/70 shadow-[4px_4px_8px_#beccda,-4px_-4px_8px_#ffffff] rounded-full w-10 h-10 flex items-center justify-center text-sm">🔊</button>
+            class="active:translate-y-[2px] active:shadow-none transition-all bg-[#ffffff] hover:bg-[#f8fafc] border-2 border-[#e2e8f0] text-[#475569] rounded-2xl w-12 h-12 flex items-center justify-center text-lg font-bold cursor-pointer shadow-[0_4px_0_0_#e2e8f0]">🔊</button>
           <button id="pauseBtn"
-            class="iconBtn bg-[#e0e8f0] border border-white/70 shadow-[4px_4px_8px_#beccda,-4px_-4px_8px_#ffffff] rounded-full w-10 h-10 flex items-center justify-center text-sm">⏸️</button>
+            class="active:translate-y-[2px] active:shadow-none transition-all bg-[#ffffff] hover:bg-[#f8fafc] border-2 border-[#e2e8f0] text-[#475569] rounded-2xl w-12 h-12 flex items-center justify-center text-lg font-bold cursor-pointer shadow-[0_4px_0_0_#e2e8f0]">⏸️</button>
           <button id="resetBtn"
-            class="iconBtn bg-[#e0e8f0] border border-white/70 shadow-[4px_4px_8px_#beccda,-4px_-4px_8px_#ffffff] rounded-full w-10 h-10 flex items-center justify-center text-sm">🔄</button>
+            class="active:translate-y-[2px] active:shadow-none transition-all bg-[#ff4b4b] hover:bg-[#ff5f5f] border-2 border-[#ea2b2b] text-white rounded-2xl w-12 h-12 flex items-center justify-center text-lg font-bold cursor-pointer shadow-[0_4px_0_0_#ea2b2b]">🔄</button>
         </div>
       </div>
       <div class="flex justify-center">
         <div
-          class="bg-gradient-to-br from-[#ffb347] to-[#ff8c1a] shadow-[4px_4px_10px_#beccda] rounded-full px-6 py-1.5 flex items-center gap-1.5 text-white font-black text-2xl">
-          <span class="text-lg">⭐</span>
-          <span id="scoreDisplay">0</span>
+          class="bg-[#ffc800] border-2 border-[#e6b400] rounded-2xl px-10 py-2.5 flex items-center gap-2 text-white font-black text-3xl tracking-wide shadow-[0_4px_0_0_#e6b400]">
+          <span class="drop-shadow-[0_2px_0_rgba(0,0,0,0.15)]">⭐</span>
+          <span id="scoreDisplay" class="drop-shadow-[0_2px_0_rgba(0,0,0,0.15)]">0</span>
         </div>
       </div>
     </div>
 
-    <div id="canvasContainer">
-      <canvas id="gameCanvas"></canvas>
+    <div id="canvasContainer" class="flex-1 relative w-full overflow-hidden bg-[#f8fafc]">
+      <canvas id="gameCanvas" class="w-full h-full block"></canvas>
     </div>
 
-    <div class="absolute bottom-0 left-0 right-0 z-20 p-4">
+    <div class="relative z-20 p-4 shrink-0 bg-[#ffffff] border-t-2 border-[#e2e8f0]">
       <div
-        class="bg-[#e0e8f0] border border-white/60 shadow-[5px_5px_10px_#beccda,-5px_-5px_10px_#ffffff] rounded-2xl px-5 py-3 flex justify-between items-center">
-        <span class="text-xs font-black text-stone-500 uppercase tracking-wider">Next Fruit</span>
-        <div class="flex items-center gap-3">
-          <span id="nextShapeName" class="text-sm font-black text-stone-700"></span>
+        class="bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-2xl px-5 py-4 flex justify-between items-center shadow-[inset_0_2px_4px_0_rgba(0,0,0,0.03)]">
+        <span class="text-sm font-black text-[#1cb0f6] uppercase tracking-wider">Next Shape</span>
+        <div class="flex items-center gap-4">
+          <span id="nextShapeName" class="text-base font-black text-[#475569]"></span>
           <div id="nextShapePreview"
-            class="w-10 h-10 rounded-xl shadow-[inset_3px_3px_6px_rgba(0,0,0,0.15),inset_-3px_-3px_6px_rgba(255,255,255,0.6)] border border-white/40">
-          </div>
+            class="w-12 h-12 rounded-2xl border-2 border-[#e2e8f0] bg-white shadow-[0_3px_0_0_#e2e8f0]"></div>
         </div>
       </div>
     </div>
 
-    <div id="gameLostOverlay">
+    <div id="gameLostOverlay"
+      class="absolute inset-0 bg-[#ffffff]/95 hidden flex items-center justify-center z-30 animate-fade-in">
       <div
-        class="bg-[#e0e8f0] shadow-[5px_5px_10px_#beccda,-5px_-5px_10px_#ffffff] rounded-3xl p-8 text-center max-w-xs mx-4 border border-white">
-        <div class="text-6xl mb-2 animate-bounce">🍎💥</div>
-        <h2 class="text-2xl font-black text-stone-800">BOX OVERFLOW!</h2>
-        <p class="text-sm mt-2 text-stone-600">The fruits reached the limit line!</p>
+        class="bg-[#ffffff] border-4 border-[#ff4b4b] rounded-3xl p-8 text-center max-w-xs mx-4 shadow-[0_8px_0_0_#ff4b4b]">
+        <div class="text-7xl mb-4">👑💥</div>
+        <h2 class="text-3xl font-black text-[#3c3c3c] tracking-tight">BOX OVERFLOW!</h2>
+        <p class="text-base mt-2 text-[#777777] font-bold">The shapes reached the limit line!</p>
         <button id="restartGameBtn"
-          class="mt-6 bg-[#e0e8f0] border border-white/70 shadow-[4px_4px_8px_#beccda,-4px_-4px_8px_#ffffff] text-stone-800 text-base px-8 py-3 rounded-full font-extrabold">Play
+          class="active:translate-y-[2px] active:shadow-none transition-all mt-8 w-full bg-[#58cc02] hover:bg-[#61e002] border-2 border-[#46a302] text-white text-lg py-3.5 rounded-2xl font-black tracking-wider uppercase cursor-pointer shadow-[0_5px_0_0_#46a302]">Play
           Again 🎮</button>
       </div>
     </div>

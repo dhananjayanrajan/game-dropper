@@ -3,7 +3,13 @@ import './style.css';
 import { SHAPE_HIERARCHY, SHAPE_TYPES, PHYSICS_CONSTANTS } from './config.js';
 import { initAudio, playGoofySound, setMuteState } from './audio.js';
 import { shapes, mergingAnimations, clearPhysicsState, addShape, checkCollisions, wakeUpShape } from './physics.js';
-import { resetScoreDisplay, renderNextShapePreview } from './ui.js';
+import { resetScoreDisplay, renderNextShapePreview, updateScoreDisplay } from './ui.js';
+
+import { updateDittoTransformations } from './powers/dittoPower.js';
+import { checkForBombExplosions } from './powers/bombPower.js';
+import { updateMagneticFields } from './powers/magneticPower.js';
+import { ComboManager } from './managers/comboManager.js';
+import { drawShapeElement } from './render/shapeRenderer.js';
 
 const wrapper = document.getElementById('mobileWrapper');
 const canvas = document.getElementById('gameCanvas');
@@ -19,6 +25,24 @@ let currentDropType = '';
 let nextDropType = '';
 let mouseX = 0;
 let isReadyToDrop = true;
+
+let dropCounter = 0;
+let isCurrentGold = false;
+let isNextGold = false;
+let isCurrentDitto = false;
+let isNextDitto = false;
+let isCurrentBomb = false;
+let isNextBomb = false;
+let isCurrentMagnetic = false;
+let isNextMagnetic = false;
+let currentMagneticTarget = '';
+let nextMagneticTarget = '';
+
+let currentComboMultiplier = 1;
+
+const comboManager = new ComboManager((count, multiplier) => {
+  currentComboMultiplier = multiplier;
+});
 
 let playArea = { x: 0, y: 0, width: 0, height: 0 };
 let canvasWidth = 0;
@@ -54,17 +78,74 @@ function resizeCanvas() {
 function generateNextShapes() {
   if (!currentDropType) {
     currentDropType = SHAPE_TYPES[Math.floor(Math.random() * 5)];
+    isCurrentGold = false;
+    isCurrentDitto = false;
+    isCurrentBomb = false;
+    isCurrentMagnetic = false;
+    currentMagneticTarget = '';
   } else {
     currentDropType = nextDropType;
+    isCurrentGold = isNextGold;
+    isCurrentDitto = isNextDitto;
+    isCurrentBomb = isNextBomb;
+    isCurrentMagnetic = isNextMagnetic;
+    currentMagneticTarget = nextMagneticTarget;
   }
-  nextDropType = SHAPE_TYPES[Math.floor(Math.random() * 5)];
-  renderNextShapePreview(nextDropType, SHAPE_HIERARCHY[nextDropType]);
+
+  dropCounter++;
+
+  if (dropCounter % 20 === 0) {
+    nextDropType = SHAPE_TYPES[Math.floor(Math.random() * 5)];
+    isNextGold = true;
+    isNextDitto = false;
+    isNextBomb = false;
+    isNextMagnetic = false;
+    nextMagneticTarget = '';
+  } else if (dropCounter % 15 === 0) {
+    nextDropType = 'Cherry';
+    isNextGold = false;
+    isNextDitto = true;
+    isNextBomb = false;
+    isNextMagnetic = false;
+    nextMagneticTarget = '';
+  } else if (dropCounter % 12 === 0) {
+    nextDropType = 'Cherry';
+    isNextGold = false;
+    isNextDitto = false;
+    isNextBomb = true;
+    isNextMagnetic = false;
+    nextMagneticTarget = '';
+  } else if (dropCounter % 9 === 0) {
+    nextDropType = 'Cherry';
+    isNextGold = false;
+    isNextDitto = false;
+    isNextBomb = false;
+    isNextMagnetic = true;
+    nextMagneticTarget = SHAPE_TYPES[Math.floor(Math.random() * 4)];
+  } else {
+    nextDropType = SHAPE_TYPES[Math.floor(Math.random() * 5)];
+    isNextGold = false;
+    isNextDitto = false;
+    isNextBomb = false;
+    isNextMagnetic = false;
+    nextMagneticTarget = '';
+  }
+
+  if (isNextDitto) {
+    renderNextShapePreview("👥 DITTO BLOCK", { color: '#e1bee7' });
+  } else if (isNextBomb) {
+    renderNextShapePreview("💣 BOMB FRUIT", { color: '#424242' });
+  } else if (isNextMagnetic) {
+    renderNextShapePreview(`🧲 MAG: ${nextMagneticTarget.toUpperCase()}`, { color: '#00e5ff' });
+  } else {
+    renderNextShapePreview(isNextGold ? "✨ SHINY GOLD" : nextDropType, SHAPE_HIERARCHY[nextDropType]);
+  }
 }
 
 function checkGameOver() {
   for (let s of shapes) {
-    if (gameTime - s.spawnTime > 0.5) {
-      if (s.y - s.radius <= 5) {
+    if (gameTime - s.spawnTime > 1.5) {
+      if (s.y - s.radius <= 80 && Math.abs(s.vx) < 0.2 && Math.abs(s.vy) < 0.2) {
         gameActive = false;
         gameOverlay.classList.remove('hidden');
         playGoofySound('gameover');
@@ -78,20 +159,43 @@ function dropCurrentShape() {
   if (!gameActive || paused || !isReadyToDrop) return;
   isReadyToDrop = false;
 
+  comboManager.triggerCombo(false);
+
   const config = SHAPE_HIERARCHY[currentDropType];
-  const size = config.size;
+  const size = (isCurrentDitto || isCurrentBomb || isCurrentMagnetic) ? 34 : config.size;
 
   const minX = size;
   const maxX = canvasWidth - size;
   const dropX = Math.max(minX, Math.min(maxX, mouseX));
-  const dropY = -size - 5;
+  const dropY = 90;
 
   const dropped = addShape(currentDropType, dropX, dropY, 0, 0, gameTime);
-  if (dropped) dropped.vy = 1.2;
+  if (dropped) {
+    dropped.vy = 1.5;
+    if (isCurrentGold) {
+      dropped.isGold = true;
+    }
+    if (isCurrentDitto) {
+      dropped.isDitto = true;
+      dropped.radius = 34;
+      dropped.vertices = [[0, -1], [0.7, -0.7], [1, 0], [0.7, 0.7], [0, 1], [-0.7, 0.7], [-1, 0], [-0.7, -0.7]];
+    }
+    if (isCurrentBomb) {
+      dropped.isBomb = true;
+      dropped.radius = 34;
+      dropped.vertices = [[0, -1], [0.7, -0.7], [1, 0], [0.7, 0.7], [0, 1], [-0.7, 0.7], [-1, 0], [-0.7, -0.7]];
+    }
+    if (isCurrentMagnetic) {
+      dropped.isMagnetic = true;
+      dropped.magneticTargetType = currentMagneticTarget;
+      dropped.radius = 34;
+      dropped.vertices = [[0, -1], [0.7, -0.7], [1, 0], [0.7, 0.7], [0, 1], [-0.7, 0.7], [-1, 0], [-0.7, -0.7]];
+    }
+  }
 
   playGoofySound('drop');
   generateNextShapes();
-  setTimeout(() => { isReadyToDrop = true; }, 250);
+  setTimeout(() => { isReadyToDrop = true; }, 300);
 }
 
 function update(dt) {
@@ -99,6 +203,10 @@ function update(dt) {
 
   gameTime += dt;
   timerDisplay.innerText = gameTime.toFixed(1);
+
+  updateDittoTransformations(shapes);
+  checkForBombExplosions(gameTime);
+  updateMagneticFields(gameTime);
 
   const { SUB_STEPS, GRAVITY, ANGULAR_DRAG, BOUNCE } = PHYSICS_CONSTANTS;
   const substepDt = 1 / SUB_STEPS;
@@ -115,7 +223,7 @@ function update(dt) {
       if (s.y + s.radius > canvasHeight) {
         s.y = canvasHeight - s.radius;
         if (s.vy > 0) s.vy = -s.vy * BOUNCE;
-        s.vx *= 0.98;
+        s.vx *= 0.95;
       }
       if (s.y - s.radius < 0) {
         s.y = s.radius;
@@ -144,12 +252,31 @@ function update(dt) {
     const anim = mergingAnimations[i];
     anim.progress += dt / anim.duration;
     if (anim.progress >= 1) {
+      if (anim.isBombFlash) {
+        mergingAnimations.splice(i, 1);
+        continue;
+      }
+
+      gameTime += 0.5;
+      comboManager.triggerCombo(true);
+
+      let mult = currentComboMultiplier;
+      if (anim.shape1Gold && anim.shape2Gold) {
+        mult *= 25;
+      }
+
+      if (mult > 1) {
+        const baseReward = SHAPE_TYPES.indexOf(anim.targetType) + 1;
+        updateScoreDisplay(baseReward * (mult - 1));
+      }
+
       const spawned = addShape(anim.targetType, anim.targetX, anim.targetY, 0, 0, gameTime);
+
       for (let s of shapes) {
         if (s.id !== spawned.id) {
           const dx = s.x - spawned.x;
           const dy = s.y - spawned.y;
-          if (Math.hypot(dx, dy) < s.radius + spawned.radius + 15) {
+          if (Math.hypot(dx, dy) < s.radius + spawned.radius + 20) {
             wakeUpShape(s);
           }
         }
@@ -160,147 +287,66 @@ function update(dt) {
   checkGameOver();
 }
 
-function drawFace(radius, face, alpha, isSleeping) {
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = '#2d3748';
-  ctx.strokeStyle = '#2d3748';
-  ctx.lineWidth = Math.max(2, radius * 0.06);
-  ctx.lineCap = 'round';
-
-  const eyeOffset = radius * 0.3;
-  const eyeY = -radius * 0.15;
-  const eyeSize = Math.max(2.5, radius * 0.07);
-
-  if (isSleeping) {
-    ctx.beginPath(); ctx.moveTo(-eyeOffset - eyeSize, eyeY); ctx.lineTo(-eyeOffset + eyeSize, eyeY); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(eyeOffset - eyeSize, eyeY); ctx.lineTo(eyeOffset + eyeSize, eyeY); ctx.stroke();
-    ctx.beginPath(); ctx.arc(0, radius * 0.25, radius * 0.1, 0, Math.PI * 2); ctx.stroke();
-  } else {
-    if (face.eyes === 'happy') {
-      ctx.beginPath(); ctx.arc(-eyeOffset, eyeY, eyeSize, Math.PI, 0, false); ctx.stroke();
-      ctx.beginPath(); ctx.arc(eyeOffset, eyeY, eyeSize, Math.PI, 0, false); ctx.stroke();
-    } else if (face.eyes === 'cute') {
-      ctx.beginPath(); ctx.arc(-eyeOffset, eyeY, eyeSize * 1.2, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(eyeOffset, eyeY, eyeSize * 1.2, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(-eyeOffset - 1, eyeY - 1, eyeSize * 0.4, 0, Math.PI * 2);
-      ctx.arc(eyeOffset - 1, eyeY - 1, eyeSize * 0.4, 0, Math.PI * 2); ctx.fill();
-    } else if (face.eyes === 'blink') {
-      ctx.beginPath(); ctx.moveTo(-eyeOffset - eyeSize, eyeY); ctx.lineTo(-eyeOffset + eyeSize, eyeY); ctx.stroke();
-      ctx.beginPath(); ctx.arc(eyeOffset, eyeY, eyeSize, Math.PI, 0, false); ctx.stroke();
-    } else {
-      ctx.beginPath(); ctx.arc(-eyeOffset, eyeY, eyeSize, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(eyeOffset, eyeY, eyeSize, 0, Math.PI * 2); ctx.fill();
-    }
-
-    const mouthY = radius * 0.2;
-    if (face.mouth === 'smile') {
-      ctx.beginPath(); ctx.arc(0, mouthY, radius * 0.2, 0, Math.PI, false); ctx.stroke();
-    } else if (face.mouth === 'smile_wide') {
-      ctx.beginPath(); ctx.arc(0, mouthY, radius * 0.25, 0, Math.PI, false); ctx.closePath(); ctx.fill();
-    } else if (face.mouth === 'open') {
-      ctx.beginPath(); ctx.arc(0, mouthY + 2, radius * 0.15, 0, Math.PI * 2); ctx.fill();
-    } else if (face.mouth === 'tongue') {
-      ctx.beginPath(); ctx.arc(0, mouthY, radius * 0.2, 0, Math.PI, false); ctx.stroke();
-      ctx.fillStyle = '#ff8a80';
-      ctx.beginPath(); ctx.arc(2, mouthY + 3, radius * 0.1, 0, Math.PI * 2); ctx.fill();
-    } else if (face.mouth === 'shy') {
-      ctx.beginPath(); ctx.moveTo(-radius * 0.15, mouthY); ctx.lineTo(radius * 0.15, mouthY); ctx.stroke();
-    }
-  }
-  ctx.restore();
-}
-
-function drawShapeElement(vertices, x, y, radius, color, angle, alpha = 1.0, squishX = 1.0, squishY = 1.0, face = null, isSleeping = false) {
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.translate(x, y);
-  ctx.rotate(angle);
-  ctx.scale(squishX, squishY);
-
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
-  ctx.shadowBlur = 6;
-  ctx.shadowOffsetX = 3;
-  ctx.shadowOffsetY = 3;
-
-  ctx.fillStyle = color;
-  ctx.lineJoin = 'round';
-
-  ctx.beginPath();
-  if (vertices && vertices.length > 0) {
-    ctx.moveTo(vertices[0][0] * radius, vertices[0][1] * radius);
-    for (let i = 1; i < vertices.length; i++) {
-      ctx.lineTo(vertices[i][0] * radius, vertices[i][1] * radius);
-    }
-  } else {
-    ctx.arc(0, 0, radius, 0, Math.PI * 2);
-  }
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.shadowColor = 'transparent';
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-  ctx.beginPath();
-  if (vertices && vertices.length > 0) {
-    ctx.moveTo(vertices[0][0] * radius, vertices[0][1] * radius);
-    for (let i = 1; i < vertices.length; i++) {
-      ctx.lineTo(vertices[i][0] * radius, vertices[i][1] * radius);
-    }
-  } else {
-    ctx.arc(0, 0, radius, 0, Math.PI * 2);
-  }
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.lineWidth = Math.max(2.5, radius * 0.05);
-  ctx.strokeStyle = '#ffffff';
-  ctx.stroke();
-
-  if (face) {
-    drawFace(radius, face, alpha, isSleeping);
-  }
-  ctx.restore();
-}
-
 function draw() {
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-  ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
+  ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
   ctx.lineWidth = 3;
   ctx.setLineDash([8, 8]);
   ctx.beginPath();
-  ctx.moveTo(0, 5);
-  ctx.lineTo(canvasWidth, 5);
+  ctx.moveTo(0, 80);
+  ctx.lineTo(canvasWidth, 80);
   ctx.stroke();
   ctx.setLineDash([]);
 
   if (gameActive && !paused && currentDropType && isReadyToDrop) {
     const config = SHAPE_HIERARCHY[currentDropType];
-    const size = config.size;
+    const size = (isCurrentDitto || isCurrentBomb || isCurrentMagnetic) ? 34 : config.size;
     const minX = size;
     const maxX = canvasWidth - size;
     const targetX = Math.max(minX, Math.min(maxX, mouseX));
-    const targetY = -size - 5;
+    const targetY = 40;
 
-    ctx.strokeStyle = 'rgba(190, 204, 218, 0.5)';
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(190, 204, 218, 0.4)';
+    ctx.lineWidth = 2;
     ctx.setLineDash([6, 6]);
     ctx.beginPath();
-    ctx.moveTo(targetX, 0);
+    ctx.moveTo(targetX, 80);
     ctx.lineTo(targetX, canvasHeight);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    drawShapeElement(config.vertices, targetX, targetY, size, config.color, 0, 0.45);
+    drawShapeElement(ctx, gameTime, config.vertices, targetX, targetY, size, config.color, 0, 0.55, 1.0, 1.0, null, false, isCurrentGold, isCurrentDitto, isCurrentBomb, isCurrentMagnetic);
   }
 
   for (let s of shapes) {
-    drawShapeElement(s.vertices, s.x, s.y, s.radius, s.color, s.angle, 1.0, s.currentSquishX, s.currentSquishY, s.face, s.isSleeping);
+    drawShapeElement(ctx, gameTime, s.vertices, s.x, s.y, s.radius, s.color, s.angle, 1.0, s.currentSquishX, s.currentSquishY, s.face, s.isSleeping, s.isGold, s.isDitto, s.isBomb, s.isMagnetic);
   }
 
   for (let anim of mergingAnimations) {
     const t = Math.min(1, anim.progress);
+
+    if (anim.isBombFlash) {
+      ctx.save();
+      ctx.globalAlpha = 1 - t;
+      ctx.fillStyle = anim.targetColor;
+      ctx.beginPath();
+      if (anim.targetVertices && anim.targetVertices.length > 0) {
+        ctx.translate(anim.targetX, anim.targetY);
+        ctx.scale(anim.targetRadius / anim.radius1, anim.targetRadius / anim.radius1);
+        ctx.moveTo(anim.targetVertices[0][0] * anim.radius1, anim.targetVertices[0][1] * anim.radius1);
+        for (let i = 1; i < anim.targetVertices.length; i++) {
+          ctx.lineTo(anim.targetVertices[i][0] * anim.radius1, anim.targetVertices[i][1] * anim.radius1);
+        }
+      } else {
+        ctx.arc(anim.targetX, anim.targetY, anim.targetRadius, 0, Math.PI * 2);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      continue;
+    }
+
     const curX1 = anim.x1 + (anim.targetX - anim.x1) * t;
     const curY1 = anim.y1 + (anim.targetY - anim.y1) * t;
     const curR1 = anim.radius1 * (1 - t);
@@ -308,12 +354,12 @@ function draw() {
     const curY2 = anim.y2 + (anim.targetY - anim.y2) * t;
     const curR2 = anim.radius2 * (1 - t);
 
-    if (curR1 > 1) drawShapeElement(anim.vertices1, curX1, curY1, curR1, anim.color1, anim.angle1, 1 - t);
-    if (curR2 > 1) drawShapeElement(anim.vertices2, curX2, curY2, curR2, anim.color2, anim.angle2, 1 - t);
+    if (curR1 > 1) drawShapeElement(ctx, gameTime, anim.vertices1, curX1, curY1, curR1, anim.color1, anim.angle1, 1 - t, 1.0, 1.0, null, false, anim.shape1Gold, false, false, false);
+    if (curR2 > 1) drawShapeElement(ctx, gameTime, anim.vertices2, curX2, curY2, curR2, anim.color2, anim.angle2, 1 - t, 1.0, 1.0, null, false, anim.shape2Gold, false, false, false);
 
     const spawnR = anim.targetRadius * t;
     if (spawnR > 1) {
-      drawShapeElement(anim.targetVertices, anim.targetX, anim.targetY, spawnR, anim.targetColor, 0, t);
+      drawShapeElement(ctx, gameTime, anim.targetVertices, anim.targetX, anim.targetY, spawnR, anim.targetColor, 0, t, 1.0, 1.0, null, false, false, false, false, false);
     }
   }
 }
@@ -332,12 +378,24 @@ function gameLoop(timestamp) {
 
 function resetGame() {
   clearPhysicsState();
+  comboManager.resetCombo();
   gameTime = 0;
+  dropCounter = 0;
   gameActive = true;
   paused = false;
   isReadyToDrop = true;
   currentDropType = '';
   nextDropType = '';
+  isCurrentGold = false;
+  isNextGold = false;
+  isCurrentDitto = false;
+  isNextDitto = false;
+  isCurrentBomb = false;
+  isNextBomb = false;
+  isCurrentMagnetic = false;
+  isNextMagnetic = false;
+  currentMagneticTarget = '';
+  nextMagneticTarget = '';
   resetScoreDisplay();
   timerDisplay.innerText = '0.0';
   pauseBtn.innerText = "⏸️";
