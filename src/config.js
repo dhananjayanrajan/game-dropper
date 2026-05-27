@@ -12,9 +12,7 @@ export const SHAPE_HIERARCHY = {
     'Coconut': { next: 'Watermelon', color: '#a1887f', size: 116, vertices: [[0, -1], [0.7, -0.7], [1, 0], [0.7, 0.7], [0, 1], [-0.7, 0.7], [-1, 0], [-0.7, -0.7]] },
     'Watermelon': { next: 'Cherry', color: '#81c784', size: 130, vertices: [[-0.9, -0.4], [0, -0.9], [0.9, -0.4], [0.7, 0.5], [0, 0.9], [-0.7, 0.5]] }
 };
-
 export const SHAPE_TYPES = Object.keys(SHAPE_HIERARCHY);
-
 export const FACES = [
     { eyes: 'happy', mouth: 'smile' },
     { eyes: 'cute', mouth: 'open' },
@@ -23,7 +21,6 @@ export const FACES = [
     { eyes: 'blink', mouth: 'smile' },
     { eyes: 'cute', mouth: 'shy' }
 ];
-
 export const PHYSICS_CONSTANTS = {
     GRAVITY: 0.32,
     BOUNCE: 0.05,
