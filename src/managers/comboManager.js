@@ -1,4 +1,4 @@
-// src/managers/comboManager.js
+// comboManager.js
 export class ComboManager {
     constructor(onUpdate) {
         this.comboCount = 0;

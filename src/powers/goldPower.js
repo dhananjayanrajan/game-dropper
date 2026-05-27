@@ -1,4 +1,4 @@
-// src/powers/goldPower.js
+// goldPower.js
 import { SHAPE_TYPES, SHAPE_HIERARCHY } from '../config.js';
 import { updateScoreDisplay } from '../ui.js';
 import { playGoofySound } from '../audio.js';

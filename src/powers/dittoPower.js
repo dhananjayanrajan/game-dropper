@@ -1,4 +1,4 @@
-// src/powers/dittoPower.js
+// dittoPower.js
 import { SHAPE_HIERARCHY } from '../config.js';
 import { playGoofySound } from '../audio.js';
 

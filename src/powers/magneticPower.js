@@ -1,3 +1,4 @@
+// magneticPower.js
 import { shapes, mergingAnimations, wakeUpShape } from '../physics.js';
 import { playGoofySound } from '../audio.js';
 
@@ -64,6 +65,12 @@ export function updateMagneticFields(gameTime) {
 
                     other.vx -= Math.cos(angle) * force;
                     other.vy -= Math.sin(angle) * force;
+
+                    const speed = Math.hypot(other.vx, other.vy);
+                    if (speed > 14) {
+                        other.vx = (other.vx / speed) * 14;
+                        other.vy = (other.vy / speed) * 14;
+                    }
                 }
             }
         }

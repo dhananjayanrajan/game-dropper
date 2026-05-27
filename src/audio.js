@@ -2,8 +2,16 @@
 let audioCtx = null;
 let masterCompressor = null;
 let isMuted = false;
+let isInitialized = false;
 
 export function initAudio() {
+    if (isInitialized) {
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        return;
+    }
+
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         masterCompressor = audioCtx.createDynamicsCompressor();
@@ -17,6 +25,7 @@ export function initAudio() {
     if (audioCtx.state === 'suspended') {
         audioCtx.resume();
     }
+    isInitialized = true;
 }
 
 export function setMuteState(state) {
@@ -25,7 +34,9 @@ export function setMuteState(state) {
 
 export function playGoofySound(type, volumeFactor = 1.0) {
     if (isMuted) return;
-    initAudio();
+    if (!isInitialized) return;
+    if (!audioCtx) return;
+
     const now = audioCtx.currentTime;
     const masterGainNode = audioCtx.createGain();
     masterGainNode.gain.value = 5.0;

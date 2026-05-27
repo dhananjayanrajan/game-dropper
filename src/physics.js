@@ -1,3 +1,4 @@
+// physics.js
 import { SHAPE_HIERARCHY, SHAPE_TYPES, FACES, PHYSICS_CONSTANTS } from './config.js';
 import { playGoofySound } from './audio.js';
 import { updateScoreDisplay } from './ui.js';
@@ -102,10 +103,6 @@ function mergeShapes(shapeA, shapeB) {
     triggerMergeAnimation(shapeA, shapeB, nextType);
     shapes = shapes.filter(s => s.id !== shapeA.id && s.id !== shapeB.id);
 
-    const idx = SHAPE_TYPES.indexOf(nextType);
-    const addedScore = (idx + 1) * 20;
-    updateScoreDisplay(addedScore);
-
     for (let s of shapes) {
         const dx = s.x - ((shapeA.x + shapeB.x) / 2);
         const dy = s.y - ((shapeA.y + shapeB.y) / 2);
@@ -125,11 +122,6 @@ export function checkCollisions(playArea, gameTime) {
     for (let i = 0; i < shapes.length; i++) {
         const s = shapes[i];
 
-        const speed = Math.hypot(s.vx, s.vy);
-        if (speed > MAX_LINEAR_SPEED) {
-            s.vx = (s.vx / speed) * MAX_LINEAR_SPEED;
-            s.vy = (s.vy / speed) * MAX_LINEAR_SPEED;
-        }
         if (Math.abs(s.angularVelocity) > MAX_ANGULAR_SPEED) {
             s.angularVelocity = Math.sign(s.angularVelocity) * MAX_ANGULAR_SPEED;
         }
@@ -195,8 +187,15 @@ export function checkCollisions(playArea, gameTime) {
                     if (!target.isSplitter && !target.isExploding && !target.isBomb && !target.isGold) {
                         const results = handleSplitterActivation(splitter, shapes);
                         if (results) {
-                            shapes.splice(shapes.indexOf(splitter), 1);
-                            shapes.splice(shapes.indexOf(target), 1);
+                            const splitterIdx = shapes.indexOf(splitter);
+                            const targetIdx = shapes.indexOf(target);
+                            if (splitterIdx > targetIdx) {
+                                shapes.splice(splitterIdx, 1);
+                                shapes.splice(targetIdx, 1);
+                            } else {
+                                shapes.splice(targetIdx, 1);
+                                shapes.splice(splitterIdx, 1);
+                            }
                             results.forEach(ns => addShape(ns.type, ns.x, ns.y, ns.vx, ns.vy, gameTime));
                             return;
                         }

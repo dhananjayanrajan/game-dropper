@@ -1,9 +1,9 @@
+// main.js
 import './style.css';
 import { SHAPE_HIERARCHY, SHAPE_TYPES, PHYSICS_CONSTANTS } from './config.js';
 import { initAudio, playGoofySound, setMuteState } from './audio.js';
 import { shapes, mergingAnimations, clearPhysicsState, addShape, checkCollisions, wakeUpShape } from './physics.js';
 import { resetScoreDisplay, renderNextShapePreview, updateScoreDisplay } from './ui.js';
-
 import { updateDittoTransformations } from './powers/dittoPower.js';
 import { checkForBombExplosions } from './powers/bombPower.js';
 import { updateMagneticFields, drawMagneticRangePulse } from './powers/magneticPower.js';
@@ -41,6 +41,7 @@ let currentMagneticTarget = '';
 let nextMagneticTarget = '';
 
 let currentComboMultiplier = 1;
+let audioInitialized = false;
 
 const comboManager = new ComboManager((count, multiplier) => {
   currentComboMultiplier = multiplier;
@@ -229,7 +230,7 @@ function update(dt) {
   checkForBombExplosions(gameTime);
   updateMagneticFields(gameTime);
 
-  const { SUB_STEPS, GRAVITY, ANGULAR_DRAG, BOUNCE } = PHYSICS_CONSTANTS;
+  const { SUB_STEPS, GRAVITY, ANGULAR_DRAG, BOUNCE, MAX_LINEAR_SPEED } = PHYSICS_CONSTANTS;
   const substepDt = 1 / SUB_STEPS;
 
   for (let step = 0; step < SUB_STEPS; step++) {
@@ -240,6 +241,12 @@ function update(dt) {
       s.y += s.vy * substepDt;
       s.angle += s.angularVelocity * substepDt;
       s.angularVelocity *= Math.pow(ANGULAR_DRAG, substepDt);
+
+      const speed = Math.hypot(s.vx, s.vy);
+      if (speed > MAX_LINEAR_SPEED) {
+        s.vx = (s.vx / speed) * MAX_LINEAR_SPEED;
+        s.vy = (s.vy / speed) * MAX_LINEAR_SPEED;
+      }
 
       if (s.y + s.radius > canvasHeight) {
         s.y = canvasHeight - s.radius;
@@ -278,7 +285,6 @@ function update(dt) {
         continue;
       }
 
-      gameTime += 0.5;
       comboManager.triggerCombo(true);
 
       let mult = currentComboMultiplier;
@@ -397,6 +403,16 @@ function draw() {
       drawShapeElement(ctx, gameTime, anim.targetVertices, anim.targetX, anim.targetY, spawnR, anim.targetColor, 0, t, 1.0, 1.0, null, false, false, false, false, false, null);
     }
   }
+
+  if (paused) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 32px Quicksand';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('PAUSED', canvasWidth / 2, canvasHeight / 2);
+  }
 }
 
 function gameLoop(timestamp) {
@@ -446,6 +462,13 @@ function handlePointerMove(clientX) {
   mouseX = Math.max(0, Math.min(canvasWidth, newX));
 }
 
+function handleFirstInteraction() {
+  if (!audioInitialized) {
+    initAudio();
+    audioInitialized = true;
+  }
+}
+
 function bindUI() {
   window.addEventListener('resize', () => {
     resizeCanvas();
@@ -459,7 +482,7 @@ function bindUI() {
   const dropHandler = (e) => {
     if (e.target.closest('button')) return;
     if (!gameActive || paused) return;
-    initAudio();
+    handleFirstInteraction();
     dropCurrentShape();
   };
 
@@ -468,12 +491,13 @@ function bindUI() {
     if (e.target.closest('button')) return;
     if (!gameActive || paused) return;
     e.preventDefault();
-    initAudio();
+    handleFirstInteraction();
     dropCurrentShape();
   });
 
   muteBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+    handleFirstInteraction();
     muted = !muted;
     setMuteState(muted);
     muteBtn.innerText = muted ? "🔇" : "🔊";
@@ -483,6 +507,7 @@ function bindUI() {
   pauseBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     if (!gameActive) return;
+    handleFirstInteraction();
     paused = !paused;
     pauseBtn.innerText = paused ? "▶️" : "⏸️";
     playGoofySound('click');
@@ -490,12 +515,14 @@ function bindUI() {
 
   resetBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+    handleFirstInteraction();
     playGoofySound('click');
     resetGame();
   });
 
   restartBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+    handleFirstInteraction();
     playGoofySound('click');
     resetGame();
   });

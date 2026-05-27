@@ -1,4 +1,4 @@
-// render/shapeRenderer.js
+// shapeRenderer.js
 import { drawGoldEffect, drawGoldDetails } from '../powers/goldPower.js';
 import { drawDittoEffect, drawDittoDetails, drawDittoFace } from '../powers/dittoPower.js';
 import { drawBombEffect, drawBombDetails } from '../powers/bombPower.js';

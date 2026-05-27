@@ -1,4 +1,4 @@
-// powers/bombPower.js
+// bombPower.js
 import { shapes, mergingAnimations, wakeUpShape } from '../physics.js';
 import { updateScoreDisplay } from '../ui.js';
 import { playGoofySound } from '../audio.js';
@@ -30,7 +30,7 @@ export function checkForBombExplosions(gameTime) {
             }
 
             if (s.bombTimerLeft <= 0 || immediateTouchTrigger) {
-                triggerExplosionChain(s, gameTime);
+                triggerExplosionChain(s, gameTime, new Set());
                 bombExploded = true;
             }
         }
@@ -45,7 +45,10 @@ export function checkForBombExplosions(gameTime) {
     }
 }
 
-function triggerExplosionChain(bombShape, gameTime) {
+function triggerExplosionChain(bombShape, gameTime, processed) {
+    if (processed.has(bombShape.id)) return;
+    processed.add(bombShape.id);
+
     bombShape.isExploding = true;
     playGoofySound('gameover');
 
@@ -59,8 +62,8 @@ function triggerExplosionChain(bombShape, gameTime) {
             const dist = Math.hypot(dx, dy);
 
             if (dist < explosionRadius) {
-                if (s.isBomb) {
-                    triggerExplosionChain(s, gameTime);
+                if (s.isBomb && !processed.has(s.id)) {
+                    triggerExplosionChain(s, gameTime, processed);
                 } else {
                     s.isExploding = true;
                     pointsEarned += 5;
@@ -97,6 +100,12 @@ function triggerExplosionChain(bombShape, gameTime) {
                     const angle = Math.atan2(dy, dx);
                     s.vx += Math.cos(angle) * force * 15;
                     s.vy += Math.sin(angle) * force * 15;
+
+                    const speed = Math.hypot(s.vx, s.vy);
+                    if (speed > 14) {
+                        s.vx = (s.vx / speed) * 14;
+                        s.vy = (s.vy / speed) * 14;
+                    }
                 }
             }
         }

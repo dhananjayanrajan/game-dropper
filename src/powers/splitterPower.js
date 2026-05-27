@@ -1,4 +1,4 @@
-// src/powers/splitterPower.js
+// splitterPower.js
 import { SHAPE_HIERARCHY, SHAPE_TYPES } from '../config.js';
 import { playGoofySound } from '../audio.js';
 
