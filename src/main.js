@@ -190,9 +190,8 @@ function dropCurrentShape() {
   const dropX = Math.max(minX, Math.min(maxX, mouseX));
   const dropY = 90;
 
-  const dropped = addShape(currentDropType, dropX, dropY, 0, 0, gameTime, isCurrentSplitter);
+  const dropped = addShape(currentDropType, dropX, dropY, 0, 1.5, gameTime, isCurrentSplitter);
   if (dropped) {
-    dropped.vy = 1.5;
     if (isCurrentGold) {
       dropped.isGold = true;
     }
@@ -214,7 +213,7 @@ function dropCurrentShape() {
       dropped.radius = 34;
       dropped.vertices = [[0, -1], [0.7, -0.7], [1, 0], [0.7, 0.7], [0, 1], [-0.7, 0.7], [-1, 0], [-0.7, -0.7]];
       dropped.vx = 0;
-      dropped.vy = 0;
+      dropped.vy = 1.5;
       dropped.angularVelocity = 0;
     }
     if (isCurrentSplitter) {
@@ -245,7 +244,6 @@ function update(dt) {
   for (let step = 0; step < SUB_STEPS; step++) {
     for (let s of shapes) {
       if (s.isSleeping || s.isExploding) continue;
-      if (s.isMagnetic) continue;
 
       s.vy += GRAVITY * substepDt;
       s.x += s.vx * substepDt;

@@ -130,7 +130,6 @@ export function checkCollisions(playArea, gameTime) {
 
         if (s.isMagnetic) {
             if (s.y + s.radius < playArea.y + playArea.height) {
-                s.vy += 0.32;
                 s.y += s.vy;
                 if (s.y + s.radius > playArea.y + playArea.height) {
                     s.y = playArea.y + playArea.height - s.radius;
