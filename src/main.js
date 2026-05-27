@@ -164,6 +164,7 @@ function generateNextShapes() {
 
 function checkGameOver() {
   for (let s of shapes) {
+    if (s.isMagnetic) continue;
     if (gameTime - s.spawnTime > 1.5) {
       if (s.y - s.radius <= 80 && Math.abs(s.vx) < 0.2 && Math.abs(s.vy) < 0.2) {
         gameActive = false;
@@ -212,6 +213,14 @@ function dropCurrentShape() {
       dropped.magneticTargetType = currentMagneticTarget;
       dropped.radius = 34;
       dropped.vertices = [[0, -1], [0.7, -0.7], [1, 0], [0.7, 0.7], [0, 1], [-0.7, 0.7], [-1, 0], [-0.7, -0.7]];
+      dropped.vx = 0;
+      dropped.vy = 0;
+      dropped.angularVelocity = 0;
+    }
+    if (isCurrentSplitter) {
+      dropped.isSplitter = true;
+      dropped.radius = 34;
+      dropped.vertices = [[0, -1], [0.7, -0.7], [1, 0], [0.7, 0.7], [0, 1], [-0.7, 0.7], [-1, 0], [-0.7, -0.7]];
     }
   }
 
@@ -236,6 +245,8 @@ function update(dt) {
   for (let step = 0; step < SUB_STEPS; step++) {
     for (let s of shapes) {
       if (s.isSleeping || s.isExploding) continue;
+      if (s.isMagnetic) continue;
+
       s.vy += GRAVITY * substepDt;
       s.x += s.vx * substepDt;
       s.y += s.vy * substepDt;

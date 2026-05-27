@@ -128,6 +128,8 @@ export function checkCollisions(playArea, gameTime) {
 
         if (s.isSleeping || s.isExploding) continue;
 
+        if (s.isMagnetic) continue;
+
         const r = s.radius;
         let boundaryHit = false;
         let hitMagnitude = 0;
@@ -174,6 +176,8 @@ export function checkCollisions(playArea, gameTime) {
             if (a.isExploding || b.isExploding) continue;
             if (a.isSleeping && b.isSleeping) continue;
 
+            if (a.isMagnetic || b.isMagnetic) continue;
+
             const dx = b.x - a.x;
             const dy = b.y - a.y;
             const dist = Math.hypot(dx, dy);
@@ -202,7 +206,7 @@ export function checkCollisions(playArea, gameTime) {
                     }
                 }
 
-                if (a.isBomb || b.isBomb || a.isMagnetic || b.isMagnetic) {
+                if (a.isBomb || b.isBomb) {
                     const nx = dx / (dist || 1);
                     const ny = dy / (dist || 1);
                     const relVx = b.vx - a.vx;
@@ -213,11 +217,11 @@ export function checkCollisions(playArea, gameTime) {
                     const correctionX = nx * overlap * POSITION_CORRECTION_PERCENT;
                     const correctionY = ny * overlap * POSITION_CORRECTION_PERCENT;
 
-                    if (!a.isSleeping) {
+                    if (!a.isSleeping && !a.isMagnetic) {
                         a.x -= correctionX * 0.5;
                         a.y -= correctionY * 0.5;
                     }
-                    if (!b.isSleeping) {
+                    if (!b.isSleeping && !b.isMagnetic) {
                         b.x += correctionX * 0.5;
                         b.y += correctionY * 0.5;
                     }
@@ -227,11 +231,11 @@ export function checkCollisions(playArea, gameTime) {
                         const impulseX = jScalar * nx;
                         const impulseY = jScalar * ny;
 
-                        if (!a.isSleeping) {
+                        if (!a.isSleeping && !a.isMagnetic) {
                             a.vx -= impulseX;
                             a.vy -= impulseY;
                         }
-                        if (!b.isSleeping) {
+                        if (!b.isSleeping && !b.isMagnetic) {
                             b.vx += impulseX;
                             b.vy += impulseY;
                         }
@@ -259,11 +263,11 @@ export function checkCollisions(playArea, gameTime) {
                 const correctionX = nx * overlap * POSITION_CORRECTION_PERCENT;
                 const correctionY = ny * overlap * POSITION_CORRECTION_PERCENT;
 
-                if (!a.isSleeping) {
+                if (!a.isSleeping && !a.isMagnetic) {
                     a.x -= correctionX * 0.5;
                     a.y -= correctionY * 0.5;
                 }
-                if (!b.isSleeping) {
+                if (!b.isSleeping && !b.isMagnetic) {
                     b.x += correctionX * 0.5;
                     b.y += correctionY * 0.5;
                 }
@@ -272,11 +276,11 @@ export function checkCollisions(playArea, gameTime) {
                 const impulseX = jScalar * nx;
                 const impulseY = jScalar * ny;
 
-                if (!a.isSleeping) {
+                if (!a.isSleeping && !a.isMagnetic) {
                     a.vx -= impulseX;
                     a.vy -= impulseY;
                 }
-                if (!b.isSleeping) {
+                if (!b.isSleeping && !b.isMagnetic) {
                     b.vx += impulseX;
                     b.vy += impulseY;
                 }
@@ -290,6 +294,14 @@ export function checkCollisions(playArea, gameTime) {
     for (let i = 0; i < shapes.length; i++) {
         const s = shapes[i];
         if (s.soundCooldown > 0) s.soundCooldown--;
+
+        if (s.isMagnetic) {
+            s.isSleeping = true;
+            s.vx = 0;
+            s.vy = 0;
+            s.angularVelocity = 0;
+            continue;
+        }
 
         const linearEnergy = s.vx * s.vx + s.vy * s.vy;
         const angularEnergy = s.angularVelocity * s.angularVelocity;
