@@ -1,4 +1,3 @@
-// powers/magneticPower.js
 import { shapes, mergingAnimations, wakeUpShape } from '../physics.js';
 import { playGoofySound } from '../audio.js';
 
@@ -45,8 +44,6 @@ export function updateMagneticFields(gameTime) {
             }
 
             const pullRadius = 240;
-            const pushForceScalar = 4.5;
-            const pullForceScalar = 8.0;
 
             for (let other of shapes) {
                 if (other.id === s.id || other.isExploding || other.isBomb || other.isGold) continue;
@@ -58,15 +55,15 @@ export function updateMagneticFields(gameTime) {
                 if (dist < pullRadius && dist > 1) {
                     wakeUpShape(other);
                     const angle = Math.atan2(dy, dx);
+                    const intensity = (pullRadius - dist) / pullRadius;
 
+                    let force = intensity * other.radius * 0.4;
                     if (other.type === s.magneticTargetType && !other.isDitto && !other.isMagnetic) {
-                        other.vx -= Math.cos(angle) * pullForceScalar;
-                        other.vy -= Math.sin(angle) * pullForceScalar;
-                    } else {
-                        const pushIntensity = (pullRadius - dist) / pullRadius;
-                        other.vx += Math.cos(angle) * pushIntensity * pushForceScalar;
-                        other.vy += Math.sin(angle) * pushIntensity * pushForceScalar;
+                        force = intensity * other.radius * 1.2;
                     }
+
+                    other.vx -= Math.cos(angle) * force;
+                    other.vy -= Math.sin(angle) * force;
                 }
             }
         }
